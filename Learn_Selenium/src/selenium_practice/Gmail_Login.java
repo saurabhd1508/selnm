@@ -48,10 +48,8 @@ public class Gmail_Login implements TestDataInt
 		// enter a valid username in the email textbox
 
 		WebElement username = driver.findElement(By.id("Email"));
-
 		username.clear();
 		username.sendKeys(TestDataInt.uName);
-
 		// enter a valid password in the password textbox
 		WebElement nextBtn = driver.findElement(By.id("next"));
 		nextBtn.click();

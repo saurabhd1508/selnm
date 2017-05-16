@@ -14,6 +14,7 @@ public class NS_Login
 	public void setting()
 	{
 		System.setProperty("webdriver.chrome.driver", "D://100rabh//Selenium//New Chrome//chromedriver.exe");
+		
 		driver = new ChromeDriver();
 	}
 	public void execute()

@@ -29,8 +29,7 @@ public class Gmail_Login implements TestDataInt
 		
 		//List<WebElement> inputs = (List<WebElement>) driver.findElement(By.tagName("input"));
 		List<WebElement> labels = driver.findElements(By.tagName("label"));
-		List<WebElement> inputs = (List<WebElement>) ((JavascriptExecutor)driver).executeScript(
-			    "var labels = arguments[0], inputs = []; for (var i=0; i < labels.length; i++){" +
+		List<WebElement> inputs = (List<WebElement>) ((JavascriptExecutor)driver).executeScript("var labels = arguments[0], inputs = []; for (var i=0; i < labels.length; i++){" +
 			    "inputs.push(document.getElementById(labels[i].getAttribute('for'))); } return inputs;", labels);
 		System.out.println("Total Inputes "+inputs.size());
 		

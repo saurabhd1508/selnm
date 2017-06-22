@@ -2,7 +2,6 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="src" path="resources"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
 	<classpathentry kind="lib" path="D:/100rabh/New Selenium/selenium-java-2.46.0/selenium-2.46.0/selenium-java-2.46.0.jar"/>
 	<classpathentry kind="lib" path="D:/100rabh/New Selenium/selenium-java-2.46.0/selenium-2.46.0/selenium-java-2.46.0-srcs.jar"/>
 	<classpathentry kind="lib" path="D:/100rabh/New Selenium/selenium-java-2.46.0/selenium-2.46.0/libs/apache-mime4j-0.6.jar"/>
@@ -43,5 +42,11 @@
 	<classpathentry kind="lib" path="D:/100rabh/New Selenium/selenium-java-2.46.0/selenium-2.46.0/libs/xercesImpl-2.11.0.jar"/>
 	<classpathentry kind="lib" path="D:/100rabh/New Selenium/selenium-java-2.46.0/selenium-2.46.0/libs/xml-apis-1.4.01.jar"/>
 	<classpathentry kind="lib" path="D:/100rabh/Selenium/New Chrome/chromedriver_win32.zip"/>
+	<classpathentry kind="lib" path="D:/100rabh/Others/Development/Softs/poi-3.16/ooxml-lib/xmlbeans-2.6.0.jar"/>
+	<classpathentry kind="lib" path="D:/100rabh/Others/Development/Softs/poi-3.16/poi-3.16.jar"/>
+	<classpathentry kind="lib" path="D:/100rabh/Others/Development/Softs/poi-3.16/poi-ooxml-3.16.jar"/>
+	<classpathentry kind="lib" path="D:/100rabh/Others/Development/Softs/poi-3.16/poi-ooxml-schemas-3.16.jar"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="D:/100rabh/Others/Development/Softs/poi-3.16/lib/commons-collections4-4.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.util.Iterator;
 
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.firefox.FirefoxDriver;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -20,8 +21,9 @@ public class GmailLoginUsingXLFile {
 
 	public static void main(String[] args) throws IOException 
 	{
-		//WebDriver driver = null;
-		//driver = new FirefoxDriver();
+		WebDriver driver = null;
+		driver = new FirefoxDriver();
+		driver.get("www.gmail.com");
 		//D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\resources\\TestData\\TestInputData.xlsx
 		//\\resources\\TestData\\TestInputData.xlsx
 		String inputFilePath="D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\resources\\TestData\\TestInputData.xlsx";

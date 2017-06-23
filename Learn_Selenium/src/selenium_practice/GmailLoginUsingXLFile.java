@@ -34,24 +34,41 @@ public class GmailLoginUsingXLFile {
 		Sheet firstSheet = workBook.getSheetAt(0);
 		Iterator<Row> rowIterator = firstSheet.iterator();
 		
+		String password, userName;
+		
 		while(rowIterator.hasNext())
 		{
 			Row nextRow = rowIterator.next();
 			Iterator<Cell> cellIterator = nextRow.cellIterator();
-			
+			Cell cell = null;
 			while(cellIterator.hasNext())
 			{
-				Cell cell = cellIterator.next();
+				cell = cellIterator.next();
 				
 				switch(cell.getCellTypeEnum())
 				{
 				//case Cell.CELL_TYPE_STRING:
 				case STRING:
 					//System.out.println("column index is "+cell.getColumnIndex());
-					if(cell.getColumnIndex()==0)
-						System.out.print(cell.getStringCellValue()+" : ");
-					else
-						System.out.print(cell.getStringCellValue());
+					//if(cell.getColumnIndex()==0)
+						//System.out.print(cell.getStringCellValue()+" : ");
+					//else
+						//System.out.print(cell.getStringCellValue());
+					if(cell.getStringCellValue().equalsIgnoreCase("userName"))
+					{
+						System.out.println("Username found...");
+						int nextColumnIndex = cell.getColumnIndex()+1;
+						//System.out.println(nextColumnIndex);
+						userName = nextRow.getCell(nextColumnIndex).toString();
+						System.out.println(userName);
+					}
+					if(cell.getStringCellValue().equalsIgnoreCase("password"))
+					{
+						System.out.println("Password found...");
+						int nextColIndex = cell.getColumnIndex()+1;
+						password = nextRow.getCell(nextColIndex).toString();
+						System.out.println(password);
+					}
 					break;
 				case BOOLEAN:
 				//case CellType.BOOLEAN:
@@ -60,9 +77,21 @@ public class GmailLoginUsingXLFile {
 				case NUMERIC:
 					System.out.println(cell.getBooleanCellValue());
 					break;
+				case BLANK:
+					break;
+				case ERROR:
+					break;
+				case FORMULA:
+					break;
+				case _NONE:
+					break;
+				default:
+					System.out.println("UserName not found!!!");
+					break;
 				}
 				//System.out.println(" - ");
 			}
+			//System.out.println(cell.getSheet().getRow(0).getCell(0).toString());
 			System.out.println();
 		}
 		workBook.close();

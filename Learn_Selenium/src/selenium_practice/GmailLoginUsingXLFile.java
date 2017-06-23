@@ -28,6 +28,7 @@ public class GmailLoginUsingXLFile {
 		FileInputStream inputStream = new FileInputStream(new File(inputFilePath));
 		
 		Workbook workBook = new XSSFWorkbook(inputStream);
+		//Workbook workBook = new XSSFWorkbook(inputStream);
  		
 		//Sheet firstSheet = (Sheet) workBook.getSheetAt(0);
 		Sheet firstSheet = workBook.getSheetAt(0);
@@ -42,21 +43,21 @@ public class GmailLoginUsingXLFile {
 			{
 				Cell cell = cellIterator.next();
 				
-				switch(cell.getCellType())
+				switch(cell.getCellTypeEnum())
 				{
-				case Cell.CELL_TYPE_STRING:
-				//case CellType.STRING:
+				//case Cell.CELL_TYPE_STRING:
+				case STRING:
 					//System.out.println("column index is "+cell.getColumnIndex());
 					if(cell.getColumnIndex()==0)
 						System.out.print(cell.getStringCellValue()+" : ");
 					else
 						System.out.print(cell.getStringCellValue());
 					break;
-				case Cell.CELL_TYPE_BOOLEAN:
+				case BOOLEAN:
 				//case CellType.BOOLEAN:
 					System.out.println(cell.getBooleanCellValue());
 					break;
-				case Cell.CELL_TYPE_NUMERIC:
+				case NUMERIC:
 					System.out.println(cell.getBooleanCellValue());
 					break;
 				}

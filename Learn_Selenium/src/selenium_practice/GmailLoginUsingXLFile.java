@@ -6,6 +6,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Iterator;
+import java.util.Properties;
 
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
@@ -20,24 +21,44 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class GmailLoginUsingXLFile {
 
-	public static void main(String[] args) throws IOException 
+	Properties prop = new Properties();
+	WebDriver driver;
+	
+	public void initializeProperties() throws FileNotFoundException 
 	{
-		WebDriver driver = null;
-		//driver = new FirefoxDriver();
+		InputStream input = null;
+		input = new FileInputStream("./resources/properties/config.properties");
+		try {
+			prop.load(input);
+		//	System.out.println(prop.getProperty("webDriverPath"));
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+		}
+		setting();
+	}
+	public void setting()
+	{
+		System.out.println(prop.getProperty("webDriverPath"));
+		System.setProperty("webdriver.chrome.driver", prop.getProperty("webDriverPath"));
+	}
+
+	public void login() throws IOException
+	{
 		driver = new ChromeDriver();
-		System.setProperty("webdriver.chrome.driver", "D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\lib\\chromedriver.exe");
-		driver.get("www.gmail.com");
+		driver.get("https://www.gmail.com");
 		
 		//D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\resources\\TestData\\TestInputData.xlsx
 		//\\resources\\TestData\\TestInputData.xlsx
-		String inputFilePath="D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\resources\\TestData\\TestInputData.xlsx";
+		//String inputFilePath="D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\resources\\TestData\\TestInputData.xlsx";
+		String inputFilePath="./resources/TestData/TestInputData.xlsx";
 		FileInputStream inputStream = new FileInputStream(new File(inputFilePath));
 		
 		Workbook workBook = new XSSFWorkbook(inputStream);
 		//Workbook workBook = new XSSFWorkbook(inputStream);
  		
 		//Sheet firstSheet = (Sheet) workBook.getSheetAt(0);
-		Sheet firstSheet = workBook.getSheetAt(0);
+		//Sheet firstSheet = workBook.getSheetAt(0);
+		Sheet firstSheet = workBook.getSheet("Sheet1");
 		Iterator<Row> rowIterator = firstSheet.iterator();
 		
 		String password, userName;
@@ -102,6 +123,16 @@ public class GmailLoginUsingXLFile {
 		}
 		workBook.close();
 		inputStream.close();
+		//driver.quit();
 	}
-
+	public static void main(String[] args) throws IOException 
+	{
+		GmailLoginUsingXLFile g =  new GmailLoginUsingXLFile();
+		g.initializeProperties();
+		g.login();
+		//driver = new FirefoxDriver();
+		
+		//System.setProperty("webdriver.chrome.driver", "D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\lib\\chromedriver.exe");
+	}
 }
+

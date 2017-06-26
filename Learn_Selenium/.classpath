@@ -50,5 +50,6 @@
 	<classpathentry kind="lib" path="lib/xercesImpl-2.11.0.jar"/>
 	<classpathentry kind="lib" path="lib/xml-apis-1.4.01.jar"/>
 	<classpathentry kind="lib" path="lib/xmlbeans-2.6.0.jar"/>
+	<classpathentry kind="lib" path="resources/browserDrivers/chromeDrivers/chromedriver_win32.zip"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

@@ -12,12 +12,12 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import com.selenium.tests.operations.ExcelFileOperations;
 import com.selenium.tests.operations.TestWebDriverOperations;
@@ -59,14 +59,18 @@ public class GmailLoginUsingXLFile {
 		System.out.println("Input File path is "+inputFilePath);
 		FileInputStream inputStream = null;
 		inputStream = xl.setFile(inputFilePath);
-		Workbook workBook = new XSSFWorkbook(inputStream);
 		
-		//Workbook workBook = new XSSFWorkbook(inputStream);
+		Workbook workBook = new HSSFWorkbook(inputStream);
  		
 		//Sheet firstSheet = (Sheet) workBook.getSheetAt(0);
 		//Sheet firstSheet = workBook.getSheetAt(0);
-		Sheet firstSheet = workBook.getSheet("Sheet1");
+		Sheet firstSheet = workBook.getSheet("Data");
 		Iterator<Row> rowIterator = firstSheet.iterator();
+		
+		for(int i=0;rowIterator.hasNext();i++)
+		{
+			System.out.println("in rowItr "+rowIterator.next().cellIterator().next().toString());
+		}
 		
 		int totalRows=0;
 		String password, userName = null;
@@ -78,28 +82,40 @@ public class GmailLoginUsingXLFile {
 			Cell cell = null;
 			
 			for(int j=0; cellIterator.hasNext(); j++)
+			//for(Cell cell : row)
 			{
 				cell = cellIterator.next();
 				CellType type = cell.getCellTypeEnum();
 				if(type == CellType.STRING)
 				{
-					userName = prop.getProperty("user");
-					password = prop.getProperty("pass");
-					/*if(cell.getStringCellValue().equalsIgnoreCase("userName"))
+					//userName = prop.getProperty("user");
+					//password = prop.getProperty("pass");
+					if(cell.getStringCellValue().equalsIgnoreCase("Col1"))
 					{
 						System.out.println("Username found...");
-						int nextColumnIndex = cell.getColumnIndex()+1;
+						//int nextRowIndex = cell.getRowIndex();
+						int nextRowIndex = cell.getRowIndex()+1;
 						//System.out.println(nextColumnIndex);
-						userName = nextRow.getCell(nextColumnIndex).toString();
+						userName = nextRow.getCell(nextRowIndex).toString();
 						System.out.println(userName);
-					}*/
+					}
 					
+					if(cell.getStringCellValue().equalsIgnoreCase("Col2"))
+					{
+						System.out.println("Password found...");
+						int nextRowIndex = cell.getRowIndex()+1;
+						//System.out.println(nextColumnIndex);
+						password = nextRow.getCell(nextRowIndex).toString();
+						System.out.println(password);
+					}
+					
+					/*
 					System.out.println("Username found...");
 					System.out.println("Username is "+xl.getStringCellData(cell,nextRow,userName));
 					System.out.println(nextRow.getRowNum());
 					//xl.getStringCellData(cell, nextRow, password);
 					System.out.println("Password found...");
-					System.out.println("Password is "+xl.getStringCellData(cell,nextRow,password));
+					System.out.println("Password is "+xl.getStringCellData(cell,nextRow,password));*/
 				}
 				else
 					System.out.println("UserName not found!!!");

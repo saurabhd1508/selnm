@@ -12,17 +12,24 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.firefox.FirefoxDriver;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import com.selenium.tests.operations.ExcelFileOperations;
+import com.selenium.tests.operations.TestWebDriverOperations;
+
 
 public class GmailLoginUsingXLFile {
 
 	Properties prop = new Properties();
 	WebDriver driver;
+	
+	TestWebDriverOperations wd = new TestWebDriverOperations();
+	ExcelFileOperations xl = new ExcelFileOperations();
 	
 	public void initializeProperties() throws FileNotFoundException 
 	{
@@ -30,45 +37,91 @@ public class GmailLoginUsingXLFile {
 		input = new FileInputStream("./resources/properties/config.properties");
 		try {
 			prop.load(input);
-		//	System.out.println(prop.getProperty("webDriverPath"));
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
-		setting();
+		//setting(); added in TestWebDriverOperations class
+		//wd.setChromeWDPath(driver);
 	}
-	public void setting()
+/*	public void setting()
 	{
 		System.out.println(prop.getProperty("webDriverPath"));
 		System.setProperty("webdriver.chrome.driver", prop.getProperty("webDriverPath"));
 	}
-
+*/
 	public void login() throws IOException
 	{
-		driver = new ChromeDriver();
-		driver.get("https://www.gmail.com");
 		
-		//D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\resources\\TestData\\TestInputData.xlsx
-		//\\resources\\TestData\\TestInputData.xlsx
-		//String inputFilePath="D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\resources\\TestData\\TestInputData.xlsx";
-		String inputFilePath="./resources/TestData/TestInputData.xlsx";
-		FileInputStream inputStream = new FileInputStream(new File(inputFilePath));
+		//driver.get("https://www.gmail.com");
 		
-		Workbook workBook = new XSSFWorkbook(inputStream);
-		//Workbook workBook = new XSSFWorkbook(inputStream);
+		String inputFilePath = prop.getProperty("inputFilePath");
+		//FileInputStream inputStream = new FileInputStream(new File(inputFilePath));
+		System.out.println("Input File path is "+inputFilePath);
+		FileInputStream inputStream = null;
+		inputStream = xl.setFile(inputFilePath);
+		
+		Workbook workBook = new HSSFWorkbook(inputStream);
  		
 		//Sheet firstSheet = (Sheet) workBook.getSheetAt(0);
 		//Sheet firstSheet = workBook.getSheetAt(0);
-		Sheet firstSheet = workBook.getSheet("Sheet1");
+		Sheet firstSheet = workBook.getSheet("Data");
 		Iterator<Row> rowIterator = firstSheet.iterator();
 		
-		String password, userName;
+		for(int i=0;rowIterator.hasNext();i++)
+		{
+			System.out.println("in rowItr "+rowIterator.next().cellIterator().next().toString());
+		}
+		
+		int totalRows=0;
+		String password, userName = null;
 		
 		while(rowIterator.hasNext())
 		{
 			Row nextRow = rowIterator.next();
 			Iterator<Cell> cellIterator = nextRow.cellIterator();
 			Cell cell = null;
-			while(cellIterator.hasNext())
+			
+			for(int j=0; cellIterator.hasNext(); j++)
+			//for(Cell cell : row)
+			{
+				cell = cellIterator.next();
+				CellType type = cell.getCellTypeEnum();
+				if(type == CellType.STRING)
+				{
+					//userName = prop.getProperty("user");
+					//password = prop.getProperty("pass");
+					if(cell.getStringCellValue().equalsIgnoreCase("Col1"))
+					{
+						System.out.println("Username found...");
+						//int nextRowIndex = cell.getRowIndex();
+						int nextRowIndex = cell.getRowIndex()+1;
+						//System.out.println(nextColumnIndex);
+						userName = nextRow.getCell(nextRowIndex).toString();
+						System.out.println(userName);
+					}
+					
+					if(cell.getStringCellValue().equalsIgnoreCase("Col2"))
+					{
+						System.out.println("Password found...");
+						int nextRowIndex = cell.getRowIndex()+1;
+						//System.out.println(nextColumnIndex);
+						password = nextRow.getCell(nextRowIndex).toString();
+						System.out.println(password);
+					}
+					
+					/*
+					System.out.println("Username found...");
+					System.out.println("Username is "+xl.getStringCellData(cell,nextRow,userName));
+					System.out.println(nextRow.getRowNum());
+					//xl.getStringCellData(cell, nextRow, password);
+					System.out.println("Password found...");
+					System.out.println("Password is "+xl.getStringCellData(cell,nextRow,password));*/
+				}
+				else
+					System.out.println("UserName not found!!!");
+			}
+			
+			/*while(cellIterator.hasNext())
 			{
 				cell = cellIterator.next();
 				
@@ -97,30 +150,20 @@ public class GmailLoginUsingXLFile {
 						System.out.println(password);
 					}
 					break;
-				case BOOLEAN:
-				//case CellType.BOOLEAN:
-					System.out.println(cell.getBooleanCellValue());
-					break;
 				case NUMERIC:
-					System.out.println(cell.getBooleanCellValue());
-					break;
-				case BLANK:
-					break;
-				case ERROR:
-					break;
-				case FORMULA:
-					break;
-				case _NONE:
+					System.out.println(cell.getNumericCellValue());
 					break;
 				default:
 					System.out.println("UserName not found!!!");
 					break;
 				}
 				//System.out.println(" - ");
-			}
+			}*/
 			//System.out.println(cell.getSheet().getRow(0).getCell(0).toString());
 			System.out.println();
+			totalRows++;
 		}
+		System.out.println("total rows = "+totalRows);
 		workBook.close();
 		inputStream.close();
 		//driver.quit();
@@ -130,9 +173,6 @@ public class GmailLoginUsingXLFile {
 		GmailLoginUsingXLFile g =  new GmailLoginUsingXLFile();
 		g.initializeProperties();
 		g.login();
-		//driver = new FirefoxDriver();
-		
-		//System.setProperty("webdriver.chrome.driver", "D:\\100rabh\\Others\\Development\\GitWorkSpaces\\selnm\\Learn_Selenium\\lib\\chromedriver.exe");
 	}
 }
 

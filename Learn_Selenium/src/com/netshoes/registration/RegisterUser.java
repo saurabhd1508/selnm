@@ -21,7 +21,7 @@ public class RegisterUser
 {
 	Workbook workbook = null;
 	WebDriver driver = null;
-	FileInputStream inputFIle = null;
+	FileInputStream inputFile = null;
 	public void settings() throws FileNotFoundException
 	{
 		System.setProperty("webdriver.chrome.driver", "./resources/browserDrivers/chromeDrivers/chromedriver.exe");
@@ -31,12 +31,12 @@ public class RegisterUser
 	
 	public void getFile() throws FileNotFoundException
 	{
-		inputFIle = new FileInputStream(new File("./resources/TestData/Steps_RegisterUser.xlsx"));
+		inputFile = new FileInputStream(new File("./resources/TestData/Steps_RegisterUser.xlsx"));
 	}
 	
 	public void processFile() throws IOException
 	{
-		workbook = new HSSFWorkbook(inputFIle);
+		workbook = new HSSFWorkbook(inputFile);
 		Sheet stepsSheet = workbook.getSheetAt(0);
 		//System.out.println(stepsSheet.getSheetName());
 		

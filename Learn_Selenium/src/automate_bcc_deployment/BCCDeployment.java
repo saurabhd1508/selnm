@@ -14,6 +14,9 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
+import com.gargoylesoftware.htmlunit.javascript.host.media.rtc.webkitRTCPeerConnection;
+import com.sun.org.apache.regexp.internal.recompile;
+
 public class BCCDeployment {
 
 	Properties prop = new Properties();
@@ -26,7 +29,7 @@ public class BCCDeployment {
 	
 	public void initializeProperties() throws FileNotFoundException {
 		InputStream input = null;
-		input = new FileInputStream("config.properties");
+		input = new FileInputStream("./resources/properties/config.properties");
 		try {
 			prop.load(input);
 		//	System.out.println(prop.getProperty("webDriverPath"));
@@ -103,18 +106,19 @@ public class BCCDeployment {
 		
 		try {
 			Thread.sleep(3000);
-			navigateCA_Console();
+			searchCA_Console();
 		} catch (InterruptedException interuptE) {
 			interuptE.printStackTrace();
 		}
 	}
 	
-	public void navigateCA_Console()
+	public void searchCA_Console()
 	{
 		WebElement lnkCAConsole;
 		System.out.println("Searching CA Console");
 		lnkCAConsole = driver.findElement(By.linkText("CA Console"));
-		System.out.println("CA Console found, highlighting it");
+		navigateTo(driver, lnkCAConsole);
+/*		System.out.println("CA Console found, highlighting it");
 
 		try {
 			((JavascriptExecutor) driver).executeScript(
@@ -126,7 +130,7 @@ public class BCCDeployment {
 
 		highLightElement(driver, lnkCAConsole);
 
-		lnkCAConsole.click();
+		lnkCAConsole.click();*/
 		checkProdOverView();
 	}
 	
@@ -153,6 +157,7 @@ public class BCCDeployment {
 	{
 		WebElement btnResumeDeployment,btnOk;
 		try {
+
 			btnResumeDeployment = driver.findElement(By
 					.partialLinkText("Resume "));
 			System.out.println("Resuming Deploy");
@@ -164,16 +169,18 @@ public class BCCDeployment {
 
 			if (btnResumeDeployment != null) {
 				btnResumeDeployment.click();
+				driver.switchTo().frame("resumeSiteActionIframe");
 				btnOk = driver.findElement(By.linkText("OK"));
 				try {
 					Thread.sleep(3000);
-					navigateCA_Console();
+					//navigateCA_Console();
 				} catch (InterruptedException inturptE) {
 					inturptE.printStackTrace();
 				}
 				highLightElement(driver, btnOk);
 				btnOk.click();
-				//navigateToDoTab();
+				System.out.println("Deployment Resumed.");
+				navigateToDoTab();
 				// chkIsResumed = driver.findElements(By.)
 			}
 		} catch (Exception e) {
@@ -199,25 +206,67 @@ public class BCCDeployment {
 				strProjectAbacosName);
 
 		if (isProjectAvailable)
+		{
 			System.out.println("Ready With Project ");
+			WebElement foundProject = driver.findElement(By.partialLinkText(strProjectAbacosName));
+			highLightElement(driver, foundProject);
+			System.out.println("Project " + strProjectAbacosName+ " available in ToDo");
+		}
 		else
-			searchProject();
+		{
+			System.out.println("Going to Search Project...");
+			WebElement lnkHome = driver.findElement(By.linkText("Home"));
+			lnkHome.click();
+			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
+			//searchProject();
+			navigateTo(driver, lnkCAProjects);
+			searchProject(driver,strProjectAbacosName);
+		}
 	}
 	
-	public void searchProject()
+	public void searchProject(WebDriver driver2, String searchProjectName) 
+	{	
+		WebElement searchBox = driver2.findElement(By.name("/atg/epub/servlet/ProcessSearchFormHandler.textInput"));
+		searchBox.sendKeys(searchProjectName);
+		WebElement lnkGo = driver2.findElement(By.linkText("Go"));
+		lnkGo.click();
+		//PubPortlets/html/ProjectsPortlet/images/icon_process.gif
+		boolean isProjectNotFound = driver2.findElements(By.tagName("img")).size()<1;
+		if(isProjectNotFound)
+		{
+			System.out.println("Project NOT Found...");
+		}
+		else
+		{
+			System.out.println("Project Found...");
+		}
+	}
+
+	public void navigateTo(WebDriver driver2, WebElement navElement)
 	{
-		System.out.println("Going to Search Project...");
+		System.out.println(navElement.toString() + " found, highlighting it");
+
+		try {
+			((JavascriptExecutor) driver).executeScript(
+					"arguments[0].scrollIntoView(true);", navElement);
+			System.out.println("JavaScript Executed...");
+		} catch (Exception e) {
+
+		}
+
+		highLightElement(driver, navElement);
+		navElement.click();
 	}
 	
 	public boolean checkProjectsInToDo(WebDriver driver2,
 			String strProjectAbacosName) {
-		WebElement chkProject;
-		chkProject = driver2.findElement(By
-				.partialLinkText(strProjectAbacosName));
-		highLightElement(driver2, chkProject);
-		System.out.println("Project " + strProjectAbacosName
-				+ " available in ToDo");
-		return true;
+		boolean chkProject;
+		//chkProject = driver2.findElement(By.partialLinkText(strProjectAbacosName));
+		chkProject = driver2.findElements(By.partialLinkText(strProjectAbacosName)).size()<1;
+		if(chkProject)
+			return false;
+		else
+			return true;
 	}
 
 	public static void main(String[] args) throws FileNotFoundException {

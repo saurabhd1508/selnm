@@ -239,9 +239,18 @@ public class BCCDeployment {
 		else
 		{
 			System.out.println("Project Found...");
+			WebElement projectFound = driver2.findElement(By.tagName("img"));
+			projectFound.click();
+			WebElement  optSelectAction = driver2.findElement(By.id("actionOption11")); 
+			selectProjectAction(driver2,optSelectAction);
 		}
 	}
-
+	
+	public void selectProjectAction(WebDriver driver2, WebElement optSelectAction)
+	{
+		optSelectAction.click();
+	}
+	
 	public void navigateTo(WebDriver driver2, WebElement navElement)
 	{
 		System.out.println(navElement.toString() + " found, highlighting it");

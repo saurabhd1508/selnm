@@ -21,7 +21,7 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-public class GmailLoginUsingXLFile1 {
+public class GmailLoginUsingXLFile {
 
 	Properties prop = new Properties();
 	WebDriver driver;
@@ -133,7 +133,7 @@ public class GmailLoginUsingXLFile1 {
 	}
 	public static void main(String[] args) throws IOException 
 	{
-		GmailLoginUsingXLFile1 g =  new GmailLoginUsingXLFile1();
+		GmailLoginUsingXLFile g =  new GmailLoginUsingXLFile();
 		g.initializeProperties();
 		g.login();
 		//driver = new FirefoxDriver();

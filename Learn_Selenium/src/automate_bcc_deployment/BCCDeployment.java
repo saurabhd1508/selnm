@@ -13,6 +13,7 @@ import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.Select;
 
 import com.gargoylesoftware.htmlunit.javascript.host.media.rtc.webkitRTCPeerConnection;
 import com.sun.org.apache.regexp.internal.recompile;
@@ -32,7 +33,6 @@ public class BCCDeployment {
 		input = new FileInputStream("./resources/properties/config.properties");
 		try {
 			prop.load(input);
-		//	System.out.println(prop.getProperty("webDriverPath"));
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 		}
@@ -40,8 +40,7 @@ public class BCCDeployment {
 	}
 
 	public void setting() {
-		System.setProperty(prop.getProperty("baseDriver"),
-				prop.getProperty("webDriverPath"));
+		System.setProperty(prop.getProperty("baseDriver"),prop.getProperty("webDriverPath"));
 		driver = new ChromeDriver();
 		openBCCUrl();
 	}
@@ -68,18 +67,22 @@ public class BCCDeployment {
 
 	public void openBCCUrl()
 	{
-		//try {
 			WebElement chkbtnLogin;
 			System.out.println("In openBCCUrl");
 			driver.get(prop.getProperty("baseUrl"));
-			chkbtnLogin = driver.findElement(By.name(prop.getProperty("btnLogin")));
-			loginToBCC();
-		//} catch (NoSuchElementException exe) {
-			//System.out.println("BCC is down or something is wrong with BCC, please check it... Closing Program");
-			//System.exit(0);
-		//}
+			boolean isBccOK = driver.findElements(By.tagName("input")).size()>1;
+			System.out.println(isBccOK);
+			if(isBccOK)
+			{
+				//chkbtnLogin = driver.findElement(By.name(prop.getProperty("btnLogin")));
+				loginToBCC();
+			}
+			else
+			{
+				System.out.println("BCC is down or something is wrong with BCC, please check it... Closing Program");
+				System.exit(0);
+			}
 	}
-	
 	public void loginToBCC()
 	{
 		System.out.println("on Login Page");
@@ -155,38 +158,24 @@ public class BCCDeployment {
 	
 	public void isDeploymentResumed()
 	{
-		WebElement btnResumeDeployment,btnOk;
-		try {
-
-			btnResumeDeployment = driver.findElement(By
-					.partialLinkText("Resume "));
-			System.out.println("Resuming Deploy");
-
-			List<WebElement> chkIsResumed = driver.findElements(By
-					.partialLinkText("deployments"));
-
-			System.out.println(chkIsResumed.size());
-
-			if (btnResumeDeployment != null) {
-				btnResumeDeployment.click();
-				driver.switchTo().frame("resumeSiteActionIframe");
-				btnOk = driver.findElement(By.linkText("OK"));
-				try {
-					Thread.sleep(3000);
-					//navigateCA_Console();
-				} catch (InterruptedException inturptE) {
-					inturptE.printStackTrace();
-				}
-				highLightElement(driver, btnOk);
-				btnOk.click();
-				System.out.println("Deployment Resumed.");
-				navigateToDoTab();
-				// chkIsResumed = driver.findElements(By.)
-			}
-		} catch (Exception e) {
+		WebElement btnResumeDeployment;
+		boolean isResumed = driver.findElements(By.partialLinkText("Resume ")).size()<1;
+		System.out.println(isResumed);
+		if(isResumed)
+		{
 			System.out.println("Deployments Already Resumed");
 			navigateToDoTab();
-			//e.printStackTrace();
+		}
+		else
+		{
+			btnResumeDeployment = driver.findElement(By.partialLinkText("Resume "));
+			System.out.println("Resuming Deploy");
+			btnResumeDeployment.click();
+			WebElement frmSiteAction = driver.findElement(By.id("resumeSiteActionIframe"));
+			driver.switchTo().frame(frmSiteAction);
+			WebElement btnOK = driver.findElement(By.partialLinkText("OK"));
+			btnOK.click();
+			System.out.println("Deployment Resumed.");
 		}
 	}
 	
@@ -200,10 +189,8 @@ public class BCCDeployment {
 	
 	public void checkAbacosProjectInToDo() 
 	{
-		// String strCaConsole = driver.findElement(By.tagName("a")).toString();
 		String strProjectAbacosName = prop.getProperty("strProjectAbacosName");
-		boolean isProjectAvailable = checkProjectsInToDo(driver,
-				strProjectAbacosName);
+		boolean isProjectAvailable = checkProjectsInToDo(driver,strProjectAbacosName);
 
 		if (isProjectAvailable)
 		{
@@ -240,16 +227,55 @@ public class BCCDeployment {
 		{
 			System.out.println("Project Found...");
 			WebElement projectFound = driver2.findElement(By.tagName("img"));
+			WebElement currentTask = driver2.findElement(By.className("current"));
+			highLightElement(driver2, currentTask);
+			String strCurrentTask = currentTask.getText();
+			System.out.println("Current Task is = "+strCurrentTask);
 			projectFound.click();
-			WebElement  optSelectAction = driver2.findElement(By.id("actionOption11")); 
-			selectProjectAction(driver2,optSelectAction);
+			//WebElement  optSelectAction = driver2.findElement(By.id("actionOption11"));
+			//By.cssSelector("[id$=default-create-firstname]")
+			WebElement  optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+			Select drpActions = new Select(optSelectAction);
+			selectProjectAction(driver2,drpActions,strCurrentTask);
 		}
 	}
 	
-	public void selectProjectAction(WebDriver driver2, WebElement optSelectAction)
+	public void selectProjectAction(WebDriver driver2, Select drpActions, String strCurrentTask)
 	{
-		optSelectAction.click();
+		WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
+		if(strCurrentTask.equals("Author"))
+		{
+			System.out.println("Selecting ready for review");
+			drpActions.selectByVisibleText("Ready for Review");
+			btnGo.click();
+			WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
+			switchToIFrame(driver2,frmWorkFlow);
+		}
+		else if(strCurrentTask.equals("Content Review"))
+		{
+			System.out.println("Approving Content");
+			drpActions.selectByVisibleText("Approve Content");
+			btnGo.click();
+			WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
+			switchToIFrame(driver2,frmWorkFlow);
+		}
+		else if(strCurrentTask.equals("Approve for Deployment"))
+		{
+			System.out.println("Adding to Todo tab");
+			drpActions.selectByVisibleText("Approve for Production Deployment");
+			btnGo.click();
+			WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
+			switchToIFrame(driver2, frmWorkFlow);
+		}
 	}
+	
+	public void switchToIFrame(WebDriver driver2, WebElement frmID)
+	{
+		driver2.switchTo().frame(frmID);
+		WebElement btnOK = driver2.findElement(By.id("okActionButton"));
+		btnOK.click();
+	}
+	
 	
 	public void navigateTo(WebDriver driver2, WebElement navElement)
 	{
@@ -260,7 +286,6 @@ public class BCCDeployment {
 					"arguments[0].scrollIntoView(true);", navElement);
 			System.out.println("JavaScript Executed...");
 		} catch (Exception e) {
-
 		}
 
 		highLightElement(driver, navElement);

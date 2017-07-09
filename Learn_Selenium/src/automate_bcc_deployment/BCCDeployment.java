@@ -179,36 +179,72 @@ public class BCCDeployment {
 		}
 	}
 	
+	boolean isAbacosInToDo = false;
+	boolean isOldPromoInToDo = false;
+	
 	public void navigateToDoTab()
 	{
 		WebElement lnkToDoTab;
 		lnkToDoTab = driver.findElement(By.linkText("To Do"));
 		lnkToDoTab.click();
-		checkAbacosProjectInToDo();
-	}
-	
-	public void checkAbacosProjectInToDo() 
-	{
 		String strProjectAbacosName = prop.getProperty("strProjectAbacosName");
-		boolean isProjectAvailable = checkProjectsInToDo(driver,strProjectAbacosName);
+		String strOldPromoProject = "Old Promotions Disabler";
+		isAbacosInToDo = checkProjectsInToDo(driver,strProjectAbacosName);
+		isOldPromoInToDo = checkProjectsInToDo(driver, strOldPromoProject);
 
-		if (isProjectAvailable)
+		if(isAbacosInToDo)
 		{
-			System.out.println("Ready With Project ");
-			WebElement foundProject = driver.findElement(By.partialLinkText(strProjectAbacosName));
-			highLightElement(driver, foundProject);
+			WebElement foundAbacosProject = driver.findElement(By.partialLinkText(strProjectAbacosName));
+			highLightElement(driver, foundAbacosProject);
 			System.out.println("Project " + strProjectAbacosName+ " available in ToDo");
 		}
-		else
+		if(isOldPromoInToDo)
 		{
-			System.out.println("Going to Search Project...");
-			WebElement lnkHome = driver.findElement(By.linkText("Home"));
-			lnkHome.click();
+			WebElement foundOldPromoProject = driver.findElement(By.partialLinkText(strOldPromoProject));
+			highLightElement(driver, foundOldPromoProject);
+			System.out.println("Project "+strOldPromoProject+" available in ToDo");
+		}
+		else if(!isAbacosInToDo && isOldPromoInToDo)
+		{
+			System.out.println("Going to Search Project  "+strProjectAbacosName);
+			goToHome();
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			//searchProject();
 			navigateTo(driver, lnkCAProjects);
 			searchProject(driver,strProjectAbacosName);
 		}
+		else if(isAbacosInToDo && !isOldPromoInToDo)
+		{
+			System.out.println("Going to Search Project  "+strOldPromoProject);
+			goToHome();
+			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
+			//searchProject();
+			navigateTo(driver, lnkCAProjects);
+			searchProject(driver,strOldPromoProject);
+		}
+		else 
+		{
+			System.out.println("Going to Search Projects  "+strProjectAbacosName+" and "+strOldPromoProject);
+			goToHome();
+			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
+			//searchProject();
+			navigateTo(driver, lnkCAProjects);
+			searchProject(driver,strProjectAbacosName,strOldPromoProject);
+		}
+	}
+	
+	public void searchProject(WebDriver driver2, String strProjectAbacosName, String strOldPromoProject) 
+	{
+		System.out.println("Ready to Search Projects  "+strProjectAbacosName+" and "+strOldPromoProject);
+		searchProject(driver,strProjectAbacosName);
+		searchProject(driver,strOldPromoProject);
+
+	}
+
+	public void goToHome()
+	{
+		WebElement lnkHome = driver.findElement(By.linkText("Home"));
+		lnkHome.click();
 	}
 	
 	public void searchProject(WebDriver driver2, String searchProjectName) 
@@ -218,28 +254,31 @@ public class BCCDeployment {
 		WebElement lnkGo = driver2.findElement(By.linkText("Go"));
 		lnkGo.click();
 		//PubPortlets/html/ProjectsPortlet/images/icon_process.gif
-		boolean isProjectNotFound = driver2.findElements(By.tagName("img")).size()<1;
-		if(isProjectNotFound)
-		{
-			System.out.println("Project NOT Found...");
-		}
-		else
+		boolean isProjectFound = driver2.findElements(By.tagName("img")).size()>1;
+		if(isProjectFound)
 		{
 			System.out.println("Project Found...");
 			WebElement projectFound = driver2.findElement(By.tagName("img"));
-			WebElement currentTask = driver2.findElement(By.className("current"));
-			highLightElement(driver2, currentTask);
-			String strCurrentTask = currentTask.getText();
-			System.out.println("Current Task is = "+strCurrentTask);
-			projectFound.click();
-			//WebElement  optSelectAction = driver2.findElement(By.id("actionOption11"));
-			//By.cssSelector("[id$=default-create-firstname]")
-			WebElement  optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
-			Select drpActions = new Select(optSelectAction);
-			selectProjectAction(driver2,drpActions,strCurrentTask);
+			boolean isCurrentTaskAvailable = driver2.findElements(By.className("current")).size()<1;
+			if(!isCurrentTaskAvailable)
+			{	
+				WebElement currentTask = driver2.findElement(By.className("current"));
+				highLightElement(driver2, currentTask);
+				String strCurrentTask = currentTask.getText();
+				System.out.println("Current Task is = "+strCurrentTask);
+				projectFound.click();
+				//WebElement  optSelectAction = driver2.findElement(By.id("actionOption11"));
+				//By.cssSelector("[id$=default-create-firstname]")
+				WebElement  optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				selectProjectAction(driver2,drpActions,strCurrentTask);
+			}
+		}
+		else
+		{
+			System.out.println("Project NOT Found...");
 		}
 	}
-	
 	public void selectProjectAction(WebDriver driver2, Select drpActions, String strCurrentTask)
 	{
 		WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
@@ -250,6 +289,7 @@ public class BCCDeployment {
 			btnGo.click();
 			WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
 			switchToIFrame(driver2,frmWorkFlow);
+			strCurrentTask = "Content Review";
 		}
 		else if(strCurrentTask.equals("Content Review"))
 		{
@@ -293,10 +333,9 @@ public class BCCDeployment {
 	}
 	
 	public boolean checkProjectsInToDo(WebDriver driver2,
-			String strProjectAbacosName) {
+			String strProjectName) {
 		boolean chkProject;
-		//chkProject = driver2.findElement(By.partialLinkText(strProjectAbacosName));
-		chkProject = driver2.findElements(By.partialLinkText(strProjectAbacosName)).size()<1;
+		chkProject = driver2.findElements(By.partialLinkText(strProjectName)).size()<1;
 		if(chkProject)
 			return false;
 		else

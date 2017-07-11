@@ -216,28 +216,41 @@ public class BCCDeployment {
 		System.out.println("Ready to Search Projects  " + strProjectAbacosName
 				+ " and " + strOldPromoProject);
 		searchProject(driver, strProjectAbacosName);
+		
+		navigateToAvailableProjects(driver);
+		
 		searchProject(driver, strOldPromoProject);
 		navigateToHome();
 		navigateToCA_Console();
 
 	}
-
+	
+	public void navigateToAvailableProjects(WebDriver driver2)
+	{
+		//« Available projects
+		WebElement availableProjects = driver2.findElement(By.partialLinkText("Available projects"));
+		navigateTo(driver2,availableProjects);
+	}
 	public void navigateToHome() {
 		WebElement lnkHome = driver.findElement(By.linkText("Home"));
 		lnkHome.click();
 	}
 
-	public void searchProject(WebDriver driver2, String searchProjectName) {
+	public void searchProject(WebDriver driver2, String searchProjectName) 
+	{
 		WebElement searchBox = driver2.findElement(By
 				.name("/atg/epub/servlet/ProcessSearchFormHandler.textInput"));
+		searchBox.clear();
 		searchBox.sendKeys(searchProjectName);
 		WebElement lnkGo = driver2.findElement(By.linkText("Go"));
 		lnkGo.click();
 		// PubPortlets/html/ProjectsPortlet/images/icon_process.gif
-		//boolean isProjectFound = driver2.findElements(By.tagName("img")).size() < 1;
-		boolean isProjectFound = driver2.findElements(By.cssSelector("input[class='centerAligned error']")).size() < 1;
+		boolean isProjectNotFound = driver2.findElements(By.tagName("img")).size() < 1;
+		//boolean isProjectNotFound = driver2.findElements(By.cssSelector("input[class='centerAligned error']")).size() < 1;
 		
-		if (isProjectFound) {
+		if (isProjectNotFound) {
+			System.out.println("Project NOT Found...");
+		} else {
 			System.out.println("Project Found...");
 			WebElement projectFound = driver2.findElement(By.tagName("img"));
 			boolean isCurrentTaskAvailable = driver2.findElements(
@@ -249,66 +262,72 @@ public class BCCDeployment {
 				String strCurrentTask = currentTask.getText();
 				System.out.println("Current Task is = " + strCurrentTask);
 				projectFound.click();
-				// WebElement optSelectAction =
-				// driver2.findElement(By.id("actionOption11"));
-				// By.cssSelector("[id$=default-create-firstname]")
-				WebElement optSelectAction = driver2.findElement(By
-						.cssSelector("[id^=actionOption]"));
-				Select drpActions = new Select(optSelectAction);
-				selectProjectAction(driver2, drpActions, strCurrentTask);
+				selectProjectAction(driver2, strCurrentTask);
 			}
-		} else {
-			System.out.println("Project NOT Found...");
 		}
 	}
-
-	public void selectProjectAction(WebDriver driver2, Select drpActions,String strCurrentTask) 
+	
+	public void selectProjectAction(WebDriver driver2, String strCurrentTask) 
 	{
-		
 		WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 		
-		ProjectActions actions = new ProjectActions(driver2,drpActions,strCurrentTask,btnGo);
+		//ProjectActions actions = new ProjectActions(driver2,drpActions,strCurrentTask,btnGo);
 		
 		if (strCurrentTask.equals("Author")) {
 			//actions.reviewProject(driver2, drpActions, btnGo);
 			//actions.approveContent(driver2, drpActions, btnGo);
 			//actions.approveForStagingDeployment(driver2, drpActions, btnGo);
-			reviewProject(driver2, drpActions, btnGo);
+			reviewProject(driver2);
 		} else if (strCurrentTask.equals("Content Review")) {
 			//actions.approveContent(driver2, drpActions, btnGo);
 		} else if (strCurrentTask.equals("Approve for Deployment")) {
 			//actions.approveForStagingDeployment(driver2, drpActions, btnGo);
+			//approveForStagingDeployment(driver2);
+			approveForProductionDeployment(driver2);
 		}
 	}
 
 	// Ready for Review
-			public void reviewProject(WebDriver driver2, Select drpActions,WebElement btnGo) {
+			public void reviewProject(WebDriver driver2) {
 				System.out.println("Selecting ready for review");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
 				drpActions.selectByVisibleText("Ready for Review");
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
 				switchToIFrame(driver2, frmWorkFlow);
 				//approveContent(driver2, drpActions, btnGo);
-				approveContent(driver2, btnGo);
+				approveContent(driver2);
 			}
 
 			// Approve Content
 			//public void approveContent(WebDriver driver2, Select drpActions,WebElement btnGo)
-			public void approveContent(WebDriver driver2,WebElement btnGo)
+			public void approveContent(WebDriver driver2)
 			{
 				System.out.println("Approving Content");
 				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
 				Select drpActions = new Select(optSelectAction);
 				drpActions.selectByVisibleText("Approve Content");
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
 				switchToIFrame(driver2, frmWorkFlow);
-				approveForStagingDeployment(driver2, drpActions, btnGo);
+				String currentUrl = driver2.getCurrentUrl();
+				if(currentUrl.contains("hmg"))
+				{
+					approveForProductionDeployment(driver2);
+				}
+				else
+					approveForStagingDeployment(driver2);
 			}
 
 			// Reject
-			public void reject(WebDriver driver2, Select drpActions, WebElement btnGo) {
+			public void reject(WebDriver driver2) {
 				System.out.println("Taking Back to Author");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Reject");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -316,9 +335,12 @@ public class BCCDeployment {
 			}
 
 			// Delete Project
-			public void deleteProject(WebDriver driver2, Select drpActions,WebElement btnGo) 
+			public void deleteProject(WebDriver driver2) 
 			{
 				System.out.println("Deleting Project");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Delete Project");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -326,9 +348,12 @@ public class BCCDeployment {
 			}
 
 			// Approve and Deploy to Staging
-			public void approveAndDeployToStaging(WebDriver driver2, Select drpActions,WebElement btnGo) 
+			public void approveAndDeployToStaging(WebDriver driver2) 
 			{
 				System.out.println("Approved and directly starting STAGE deployment");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Approve and Deploy to Staging");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -336,18 +361,24 @@ public class BCCDeployment {
 			}
 
 			// Approve for Staging Deployment
-			public void approveForStagingDeployment(WebDriver driver2,Select drpActions, WebElement btnGo) {
+			public void approveForStagingDeployment(WebDriver driver2) {
 				System.out.println("Adding to STAGE ToDo tab");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
 				drpActions.selectByVisibleText("Approve for Staging Deployment");
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
 				switchToIFrame(driver2, frmWorkFlow);
 			}
 
 			// Reject Staging Deployment
-			public void rejectStagingDeployment(WebDriver driver2,Select drpActions, WebElement btnGo) 
+			public void rejectStagingDeployment(WebDriver driver2) 
 			{
 				System.out.println("Rejecting STAGE Deployment");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Reject Staging Deployment");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -355,9 +386,12 @@ public class BCCDeployment {
 			}
 
 			// Accept Staging Deployment
-			public void acceptStagingDeployment(WebDriver driver2,Select drpActions, WebElement btnGo) 
+			public void acceptStagingDeployment(WebDriver driver2) 
 			{
 				System.out.println("Accepting STAGE Deployment");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Accept Staging Deployment");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -365,9 +399,12 @@ public class BCCDeployment {
 			}
 
 			// Revert Assets on Staging Immediately
-			public void revertAssetsOnStagingImmediately(WebDriver driver2,Select drpActions, WebElement btnGo) 
+			public void revertAssetsOnStagingImmediately(WebDriver driver2) 
 			{
 				System.out.println("Reverting Assets on STAGE Immediately");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Revert Assets on Staging Immediately");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -375,9 +412,12 @@ public class BCCDeployment {
 			}
 
 			// Approve and Deploy to Production
-			public void approveAndDeployToProduction(WebDriver driver2,Select drpActions, WebElement btnGo) 
+			public void approveAndDeployToProduction(WebDriver driver2) 
 			{
 				System.out.println("Approving and directly starting PRODUCTION deployment");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Approve and Deploy to Production");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -385,9 +425,12 @@ public class BCCDeployment {
 			}
 
 			// Approve for Production Deployment
-			public void approveForProductionDeployment(WebDriver driver2,Select drpActions, WebElement btnGo) 
+			public void approveForProductionDeployment(WebDriver driver2) 
 			{
 				System.out.println("Adding to PRODUCTION ToDo tab");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Approve for Production Deployment");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -395,9 +438,12 @@ public class BCCDeployment {
 			}
 
 			// Reject Production Deployment
-			public void rejectProductionDeployment(WebDriver driver2,Select drpActions, WebElement btnGo) 
+			public void rejectProductionDeployment(WebDriver driver2) 
 			{
 				System.out.println("Rejecting PRODUCTION Deployment");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Reject Production Deployment");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -405,9 +451,12 @@ public class BCCDeployment {
 			}
 
 			// Accept Production Deployment
-			public void acceptProductionDeployment(WebDriver driver2,Select drpActions, WebElement btnGo) 
+			public void acceptProductionDeployment(WebDriver driver2) 
 			{
 				System.out.println("Accepting PRODUCTION Deployment");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Accept Production Deployment");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
@@ -415,9 +464,12 @@ public class BCCDeployment {
 			}
 
 			// Revert Assets on Production Immediately
-			public void revertAssetsOnProductionImmediately(WebDriver driver2,Select drpActions, WebElement btnGo) 
+			public void revertAssetsOnProductionImmediately(WebDriver driver2) 
 			{
 				System.out.println("Reverting assets on PRODUCTION Immediately");
+				WebElement optSelectAction = driver2.findElement(By.cssSelector("[id^=actionOption]"));
+				Select drpActions = new Select(optSelectAction);
+				WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 				drpActions.selectByVisibleText("Revert Assets on Production Immediately");
 				btnGo.click();
 				WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));

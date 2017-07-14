@@ -4,7 +4,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Properties;
 
 import org.openqa.selenium.By;
@@ -22,12 +25,15 @@ public class BCCDeployment {
 
 	Properties prop = new Properties();
 	WebDriver driver;
-
-	public void startDeploymentProcess() throws FileNotFoundException {
+	String strProjectAbacosName;
+	String strOldPromoProject;
+	public void startDeploymentProcess() throws FileNotFoundException 
+	{
 		initializeProperties();
 	}
 
-	public void initializeProperties() throws FileNotFoundException {
+	public void initializeProperties() throws FileNotFoundException 
+	{
 		InputStream input = null;
 		input = new FileInputStream("./resources/properties/config.properties");
 		try {
@@ -37,14 +43,15 @@ public class BCCDeployment {
 		}
 		setting();
 	}
-
+	
 	public void setting() {
 		System.setProperty(prop.getProperty("baseDriver"),prop.getProperty("webDriverPath"));
 		driver = new ChromeDriver();
 		openBCCUrl();
 	}
 
-	public void highLightElement(WebDriver driver, WebElement webElement) {
+	public void highLightElement(WebDriver driver, WebElement webElement) 
+	{
 		String DELAY = "delay";
 		JavascriptExecutor js = (JavascriptExecutor) driver;
 		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",
@@ -66,10 +73,9 @@ public class BCCDeployment {
 
 	public void openBCCUrl() 
 	{
-		System.out.println("In openBCCUrl");
 		driver.get(prop.getProperty("baseUrl"));
 		boolean isBccOK = driver.findElements(By.tagName("input")).size() > 1;
-		System.out.println(isBccOK+" BCC is working");
+		System.out.println(isBccOK+" BCC is working fine");
 		if (isBccOK) {
 			loginToBCC();
 		} else {
@@ -116,25 +122,42 @@ public class BCCDeployment {
 		navigateTo(driver, lnkCAConsole);
 		checkProdOverView();
 	}
-
-	public void checkProdOverView() {
-		WebElement lnkProdOverview;
-		String prodOverviewStr = prop.getProperty("prodOverviewXpath");
-		boolean prodOverview = driver.findElement(By.xpath(prodOverviewStr))
-				.getAttribute("href")
-				.contains(prop.getProperty("hmg02ProdTar"));
+	
+	boolean firstVisitToProdOverview = false; 
+	
+	public void checkProdOverView() 
+	{
+		strProjectAbacosName = prop.getProperty("strProjectAbacosName");
+		strOldPromoProject = prop.getProperty("strProjectOldPromoName");
+		if(!firstVisitToProdOverview)
+		{
+			firstVisitToProdOverview=true;
+			WebElement lnkProdOverview;
+			String prodOverviewStr = prop.getProperty("prodOverviewXpath");
+			boolean prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("hmg02ProdTar"));
 		// boolean stageOverview =
 		// driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("ProductionProdTar"));
 		if (prodOverview) {
-			System.out.println("Prod link found");
+			System.out.println("Production overview found");
 			lnkProdOverview = driver.findElement(By.linkText("Production"));
 			highLightElement(driver, lnkProdOverview);
 			lnkProdOverview.click();
+			checkPlanTab();
+			checkAgents();
 			isDeploymentResumed();
-		} else
+		} 
+		else
 			System.out.println("Prod link NOT found");
+		}
+		else
+		{
+			System.out.println("Second time in Prod overview...");
+			isAbacosInToDo = checkProjectsInToDo(driver, strProjectAbacosName);
+			if(isAbacosInToDo)
+			System.out.println(driver.findElement(By.partialLinkText(strProjectAbacosName)).getText());	
+		}
 	}
-
+	
 	public void isDeploymentResumed() {
 		WebElement btnResumeDeployment;
 		boolean isResumed = driver.findElements(By.partialLinkText("Resume ")).size() < 1;
@@ -163,8 +186,7 @@ public class BCCDeployment {
 		WebElement lnkToDoTab;
 		lnkToDoTab = driver.findElement(By.linkText("To Do"));
 		lnkToDoTab.click();
-		String strProjectAbacosName = prop.getProperty("strProjectAbacosName");
-		String strOldPromoProject = "Old Promotions Disabler";
+		
 		isAbacosInToDo = checkProjectsInToDo(driver, strProjectAbacosName);
 		isOldPromoInToDo = checkProjectsInToDo(driver, strOldPromoProject);
 
@@ -172,59 +194,84 @@ public class BCCDeployment {
 			WebElement foundAbacosProject = driver.findElement(By
 					.partialLinkText(strProjectAbacosName));
 			highLightElement(driver, foundAbacosProject);
-			System.out.println("Project " + strProjectAbacosName
+			System.out.println("Project " + foundAbacosProject.getText()
 					+ " available in ToDo");
 		}
 		if (isOldPromoInToDo) {
 			WebElement foundOldPromoProject = driver.findElement(By
 					.partialLinkText(strOldPromoProject));
 			highLightElement(driver, foundOldPromoProject);
-			System.out.println("Project " + strOldPromoProject
+			System.out.println("Project " + foundOldPromoProject.getText()
 					+ " available in ToDo");
 		} else if (!isAbacosInToDo && isOldPromoInToDo) {
-			System.out.println("Going to Search Project  "
-					+ strProjectAbacosName);
+			System.out.println(strProjectAbacosName +" is not available in ToDo, Going to Search it");
 			navigateToHome();
-			WebElement lnkCAProjects = driver.findElement(By
-					.linkText("CA Projects"));
+			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
 			navigateTo(driver, lnkCAProjects);
 			searchProject(driver, strProjectAbacosName);
 		} else if (isAbacosInToDo && !isOldPromoInToDo) {
-			System.out
-					.println("Going to Search Project  " + strOldPromoProject);
+			System.out.println(strOldPromoProject + " is not available in ToDo, Going to Search it");
 			navigateToHome();
-			WebElement lnkCAProjects = driver.findElement(By
-					.linkText("CA Projects"));
+			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
 			navigateTo(driver, lnkCAProjects);
 			searchProject(driver, strOldPromoProject);
 		} else {
-			System.out.println("Going to Search Projects  "
-					+ strProjectAbacosName + " and " + strOldPromoProject);
+			System.out.println("Going to Search Projects  " + strProjectAbacosName + " and " + strOldPromoProject);
 			navigateToHome();
-			WebElement lnkCAProjects = driver.findElement(By
-					.linkText("CA Projects"));
+			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
 			navigateTo(driver, lnkCAProjects);
 			searchProject(driver, strProjectAbacosName, strOldPromoProject);
 		}
 	}
 
-	public void searchProject(WebDriver driver2, String strProjectAbacosName,
-			String strOldPromoProject) {
-		System.out.println("Ready to Search Projects  " + strProjectAbacosName
-				+ " and " + strOldPromoProject);
+	public void searchProject(WebDriver driver2, String strProjectAbacosName,String strOldPromoProject) 
+	{
+		System.out.println("Ready to Search Projects  " + strProjectAbacosName	+ " and " + strOldPromoProject);
 		searchProject(driver, strProjectAbacosName);
 		
 		navigateToAvailableProjects(driver);
 		
 		searchProject(driver, strOldPromoProject);
-		navigateToHome();
-		navigateToCA_Console();
-
+		//navigateToHome();
+		//navigateToCA_Console();
+		checkPlanTab();
 	}
 	
+	public void checkPlanTab()
+	{
+		System.out.println("Checking Plan tab");
+		WebElement planTab = driver.findElement(By.linkText("Plan"));
+		planTab.click();
+		boolean isPlanEmpty = driver.findElements(By.tagName("img")).size() < 1;
+		if(isPlanEmpty)
+			System.out.println("No projects in Plan tab");
+		else
+		{
+			System.out.println("There are projects availabel in Plan tab... Please cancel them");
+			WebElement selectAll = driver.findElement(By.id("checkAllField"));
+			selectAll.click();
+			WebElement btnCancelSelected = driver.findElement(By.linkText("Cancel selected"));
+			btnCancelSelected.click();
+			WebElement frmCancelDeployment = driver.findElement(By.id("cancelDeploymentsActionIframe"));
+
+			driver.switchTo().frame(frmCancelDeployment);
+			WebElement btnOK = driver.findElement(By.linkText("OK"));
+			btnOK.click();
+			try {
+				Thread.sleep(3000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			if((driver.findElements(By.tagName("img")).size() < 1))
+			{
+				System.out.println("Projects cancelled...");
+			}
+		}
+	}
 	public void navigateToAvailableProjects(WebDriver driver2)
 	{
 		//« Available projects
@@ -235,22 +282,104 @@ public class BCCDeployment {
 		WebElement lnkHome = driver.findElement(By.linkText("Home"));
 		lnkHome.click();
 	}
+	
+	public void checkAgents()
+	{
+		WebElement agentsTab = driver.findElement(By.linkText("Agents"));
+		agentsTab.click();
+		try {
+			Thread.sleep(3000);
+			WebElement lblSnapshot = driver.findElement(By.xpath("//*[@id=\"adminDeployment\"]/table/tbody/tr[2]/td[5]/span"));
+			String currentSnapshot = lblSnapshot.getText();
+			System.out.println("Current Snapshot is - "+currentSnapshot);
+			StringBuilder snapshotString = new StringBuilder(currentSnapshot);
+			snapshotString.insert(0, "<td class=\"rightAligned\"><span class=\"tableInfo\">");
+			snapshotString.append("</span></td>");
+			//System.out.println("Uppended string is "+snapshotString);
+			//String upendedSnapshot = currentSnapshot.
+			
+			
+			String pageSource = driver.getPageSource();
+			//System.out.println(pageSource);
 
+	        int ind,count=0;
+	        for(int i=0; i+snapshotString.length()<=pageSource.length(); i++)    //i+sub.length() is used to reduce comparisions
+	        {
+	            //ind = pageSource.indexOf(snapshotString, i);
+	            ind=pageSource.indexOf(i);
+	            if(ind>=0)
+	            {
+	                count++;
+	                i=ind;
+	                ind=-1;
+	            }
+	        }
+	        
+	        System.out.println("Occurence of  '"+snapshotString+"'  in Agents is  "+count);
+	 
+		//	String pageSource = "I am a Boy I am a";
+	        /*String[] splitStr = pageSource.split(" ");
+			Map<String, Integer> wordCount = new HashMap<String, Integer>();
+			for (String word: splitStr) {
+			    if (wordCount.containsKey(snapshotString)) 
+			    {
+			    	System.out.println("**** Snapshout found *****");
+			        // Map already contains the word key. Just increment it's count by 1
+			        wordCount.put(word, wordCount.get(word) + 1);
+			    } else {
+			        // Map doesn't have mapping for word. Add one with count = 1
+			        wordCount.put(word, 1);
+			    }
+			}
+			
+			for (Entry<String, Integer> entry: wordCount.entrySet()) {
+			    System.out.println("Count of : " + entry.getKey() + " in sentence = " + entry.getValue());
+			}  
+			
+			int snapshotCount=0;
+			while(pageSource.contains(snapshot.getText()))
+			{
+				snapshotCount++;
+			}
+			System.out.println("Total snapshot count is "+snapshotCount);*/
+			//pageSourcecontains(snapshot.getText());
+			//.contains(snapshot.getText());
+		} catch (InterruptedException interuptE) {
+			interuptE.printStackTrace();
+		}
+	}
+	
 	public void searchProject(WebDriver driver2, String searchProjectName) 
 	{
 		WebElement searchBox = driver2.findElement(By
 				.name("/atg/epub/servlet/ProcessSearchFormHandler.textInput"));
 		searchBox.clear();
 		searchBox.sendKeys(searchProjectName);
-		WebElement lnkGo = driver2.findElement(By.linkText("Go"));
-		lnkGo.click();
+		//WebElement lnkGo = driver2.findElement(By.linkText("Go"));
+		WebElement lnkGo = driver2.findElement(By.className("goButton")); 
+		JavascriptExecutor jse = (JavascriptExecutor)driver2;
+		jse.executeScript("arguments[0].scrollIntoView()", lnkGo);
+		System.out.println(lnkGo.getText());
+		try {
+			Thread.sleep(3000);
+			lnkGo.click();
+		} catch (InterruptedException interuptE) {
+			interuptE.printStackTrace();
+		}
+		
 		// PubPortlets/html/ProjectsPortlet/images/icon_process.gif
 		boolean isProjectNotFound = driver2.findElements(By.tagName("img")).size() < 1;
+		//boolean isProjectNotFound = driver2.findElements(By.tagName("img")).
 		//boolean isProjectNotFound = driver2.findElements(By.cssSelector("input[class='centerAligned error']")).size() < 1;
 		
-		if (isProjectNotFound) {
-			System.out.println("Project NOT Found...");
-		} else {
+		if (isProjectNotFound) 
+		{
+			System.out.println("Project "  + searchProjectName + " NOT Found...");
+			navigateToHome();
+			navigateToCA_Console();
+		}
+		else 
+		{
 			System.out.println("Project Found...");
 			WebElement projectFound = driver2.findElement(By.tagName("img"));
 			boolean isCurrentTaskAvailable = driver2.findElements(
@@ -497,12 +626,14 @@ public class BCCDeployment {
 
 	public boolean checkProjectsInToDo(WebDriver driver2, String strProjectName) {
 		boolean chkProject;
-		chkProject = driver2.findElements(By.partialLinkText(strProjectName))
-				.size() < 1;
+		//chkProject = driver2.findElements(By.partialLinkText(strProjectName)).size() > 1;
+		//driver2.findElements(By.tagName("img")).size() < 1
+		//chkProject = driver2.findElements(By.tagName("img").partialLinkText(strProjectName)).size()>1;
+		chkProject = driver2.getPageSource().contains(strProjectName);
 		if (chkProject)
-			return false;
-		else
 			return true;
+		else
+			return false;
 	}
 
 	public static void main(String[] args) throws FileNotFoundException {

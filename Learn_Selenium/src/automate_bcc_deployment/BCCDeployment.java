@@ -4,22 +4,13 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Properties;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.Select;
-
-import com.gargoylesoftware.htmlunit.javascript.host.media.rtc.webkitRTCPeerConnection;
-import com.sun.org.apache.regexp.internal.recompile;
 
 public class BCCDeployment {
 
@@ -28,7 +19,7 @@ public class BCCDeployment {
 	String strProjectAbacosName;
 	String strOldPromoProject;
 	ProjectActions actions;
-	
+	String environment=null;
 	public void startDeploymentProcess() throws FileNotFoundException 
 	{
 		initializeProperties();
@@ -76,7 +67,19 @@ public class BCCDeployment {
 
 	public void openBCCUrl() 
 	{
-		driver.get(prop.getProperty("baseUrl"));
+		driver.get(prop.getProperty("BaseUrlHMG"));
+		if(driver.getCurrentUrl().contains("hmg02"))
+		{
+			environment = "HMG02"; 
+		}
+		else if(driver.getCurrentUrl().contains(prop.getProperty("curBCCurlBR")))
+		{
+			environment = "BR_Production";
+		}
+		else if(driver.getCurrentUrl().contains(prop.getProperty("curBCCurlAR")))
+		{
+			environment = "AR_Production";
+		}
 		boolean isBccOK = driver.findElements(By.tagName("input")).size() > 1;
 		System.out.println(isBccOK+" BCC is working fine");
 		if (isBccOK) {
@@ -91,15 +94,37 @@ public class BCCDeployment {
 		System.out.println("on Login Page");
 		WebElement txtuser, txtPass, btnLogin;
 		String chkHomeUrl, uName, pass;
+		
+		if(environment.equals("HMG02"))
+		{
+			txtuser = driver.findElement(By.id("loginName"));
+			uName = prop.getProperty("userName");
+			txtuser.sendKeys(uName);
 
-		txtuser = driver.findElement(By.id("loginName"));
-		uName = prop.getProperty("userName");
-		txtuser.sendKeys(uName);
+			txtPass = driver.findElement(By.id("loginPassword"));
+			pass = prop.getProperty("HMGpassword");
+			txtPass.sendKeys(pass);
+		}
+		if(environment.equals("BR_Production"))
+		{
+			txtuser = driver.findElement(By.id("loginName"));
+			uName = prop.getProperty("userName");
+			txtuser.sendKeys(uName);
 
-		txtPass = driver.findElement(By.id("loginPassword"));
-		pass = prop.getProperty("password");
-		txtPass.sendKeys(pass);
+			txtPass = driver.findElement(By.id("loginPassword"));
+			pass = prop.getProperty("prodPassword");
+			txtPass.sendKeys(pass);
+		}
+		if(environment.equals("AR_Production"))
+		{
+			txtuser = driver.findElement(By.id("loginName"));
+			uName = prop.getProperty("userName");
+			txtuser.sendKeys(uName);
 
+			txtPass = driver.findElement(By.id("loginPassword"));
+			pass = prop.getProperty("prodPassword");
+			txtPass.sendKeys(pass);
+		}
 		btnLogin = driver.findElement(By.name(prop.getProperty("btnLogin")));
 		btnLogin.click();
 
@@ -136,20 +161,26 @@ public class BCCDeployment {
 		{
 			firstVisitToProdOverview=true;
 			WebElement lnkProdOverview;
-			String prodOverviewStr = prop.getProperty("prodOverviewXpath");
-			String currentUrl = driver.getCurrentUrl();
+			String prodOverviewStr=null;
+			//String currentUrl = driver.getCurrentUrl();
 			boolean prodOverview = false;
-			if(currentUrl.contains("hmg"))
+			//if(currentUrl.contains("hmg"))
+			if(environment.equals("HMG02"))
 			{
+				prodOverviewStr = prop.getProperty("prodOverviewXpathHMG");
 				prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("hmg02ProdTar"));
 			}
-			else if(currentUrl.contains(prop.getProperty("curBCCurlBR")))
+			//else if(currentUrl.contains(prop.getProperty("curBCCurlBR")))
+			else if(environment.equals("BR_Production"))
 			{
-				prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("hmg02ProdTar"));
+				prodOverviewStr = prop.getProperty("prodOverviewXpathBR");
+				prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("BRProdTar"));
 			}
-			else if(currentUrl.contains(prop.getProperty("curBCCurlAR")))
+			//else if(currentUrl.contains(prop.getProperty("curBCCurlAR")))
+			else if(environment.equals("AR_Production"))
 			{
-				prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("hmg02ProdTar"));
+				prodOverviewStr = prop.getProperty("prodOverviewXpathAR");
+				prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("ARProdTar"));
 			}
 			
 		// boolean stageOverview =
@@ -192,8 +223,21 @@ public class BCCDeployment {
 		WebElement btnDeploy = driver.findElement(By.linkText("Deploy"));
 		highLightElement(driver, btnDeploy);
 		//btnDeploy.click();
+		navigateToDetaisTab();
+		monitorDeployment();
 	}
-
+	
+	public void navigateToDetaisTab()
+	{
+		WebElement lnkDetails = driver.findElement(By.linkText("Details"));
+		lnkDetails.click();
+	}
+	
+	public void monitorDeployment()
+	{
+		
+	}
+	
 	public void isDeploymentResumed() {
 		WebElement btnResumeDeployment;
 		boolean isResumed = driver.findElements(By.partialLinkText("Resume ")).size() < 1;
@@ -214,6 +258,9 @@ public class BCCDeployment {
 			WebElement btnOK = driver.findElement(By.partialLinkText("OK"));
 			btnOK.click();
 			System.out.println("Deployment Resumed.");
+			navigateToAgents();
+			navigateToPlanTab();
+			navigateToDoTab();
 		}
 	}
 
@@ -332,15 +379,19 @@ public class BCCDeployment {
 			snapshotString.insert(0, "<td class=\"rightAligned\"><span class=\"tableInfo\">");
 			snapshotString.append("</span></td>");
 			//System.out.println("Uppended string is "+snapshotString);
+			String str = snapshotString.toString();
+			System.out.println("Got String from builder "+str);
 			
 			String pageSource = driver.getPageSource();
 			//System.out.println(pageSource);
 
 	        int ind,snapshotCount=0,agentStatusCount=0;
-	        for(int i=0; i+snapshotString.length()<=pageSource.length(); i++)    //i+sub.length() is used to reduce comparisons
+	        for(int i=0; i+str.length()<=pageSource.length(); i++)    //i+sub.length() is used to reduce comparisons
 	        {
+	        	//int indexOf(substring,fromIndex);
 	            //ind = pageSource.indexOf(snapshotString, i);
-	            ind=pageSource.indexOf(i);
+	        	
+	            ind=pageSource.indexOf(str, i);
 	            if(ind>=0)
 	            {
 	                snapshotCount++;
@@ -352,16 +403,17 @@ public class BCCDeployment {
 	        System.out.println("Total number of snapshot '"+currentSnapshot+"'  in Agents is  "+snapshotCount);
 	        System.out.println("Total number of Idle Agents is  "+agentStatusCount);
 	        
-	        if(driver.getCurrentUrl().contains("hmg"))
+	        if(environment.equals("HMG02"))
 	        {
 	        	if(snapshotCount==1 && agentStatusCount==1)
 	        	{
-	        		System.out.println("Agents health is OK and we can start deployment");
+	        		System.out.println("Agents health is OK and we are good to start deployment");
 	        	}
 	        	else
 	        		System.out.println("Something is wrong with Agents. Please check");
 	        }
-	        else if(driver.getCurrentUrl().contains(prop.getProperty("curBCCurlBR")))
+	        //else if(driver.getCurrentUrl().contains(prop.getProperty("curBCCurlBR")))
+	        else if(environment.equals("BR_Production"))
 	        {
 	        	if(snapshotCount==Integer.parseInt(prop.getProperty("totalBRAgents")) && agentStatusCount==Integer.parseInt(prop.getProperty("totalBRAgents")))
 	        	{
@@ -370,7 +422,8 @@ public class BCCDeployment {
 	        	else
 	        		System.out.println("Something is wrong with Agents. Please check");
 	        }
-	        else if(driver.getCurrentUrl().contains(prop.getProperty("curBCCurlAR")))
+	        //else if(driver.getCurrentUrl().contains(prop.getProperty("curBCCurlAR")))
+	        else if(environment.equals("AR_Production"))
 	        {
 	        	if(snapshotCount==Integer.parseInt(prop.getProperty("totalARAgents")) && agentStatusCount==Integer.parseInt(prop.getProperty("totalARAgents")))
 	        	{
@@ -432,7 +485,7 @@ public class BCCDeployment {
 	
 	public void selectProjectAction(WebDriver driver2, String strCurrentTask) 
 	{
-		WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
+		//WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
 		
 		//ProjectActions actions = new ProjectActions(driver2,drpActions,strCurrentTask,btnGo);
 		
@@ -457,11 +510,10 @@ public class BCCDeployment {
 	}
 
 	public void navigateTo(WebDriver driver2, WebElement navElement) {
-		System.out.println(navElement.toString() + " found, highlighting it");
+		System.out.println(navElement.getText() + " found, highlighting it");
 		try {
 			((JavascriptExecutor) driver).executeScript(
 					"arguments[0].scrollIntoView(true);", navElement);
-			System.out.println("JavaScript Executed...");
 		} catch (Exception e) {
 		}
 

@@ -29,6 +29,7 @@ public class BCCDeployment {
 	{
 		InputStream input = null;
 		input = new FileInputStream("./resources/properties/config.properties");
+		//input = new FileInputStream("D://100rabh//Others//Development//GitWorkSpaces//selnm//Learn_Selenium//resources//properties//config.properties");
 		try {
 			prop.load(input);
 		} catch (IOException ioe) {
@@ -209,7 +210,6 @@ public class BCCDeployment {
 			Thread.sleep(1000);
 			monitorDeployment();
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -244,7 +244,7 @@ public class BCCDeployment {
 			driver.switchTo().frame(frmSiteAction);
 			WebElement btnOK = driver.findElement(By.partialLinkText("OK"));
 			btnOK.click();
-			System.out.println("Deployment Resumed.");
+			System.out.println("Deployments Resumed.");
 			navigateToAgents();
 			navigateToPlanTab();
 			navigateToDoTab();
@@ -281,14 +281,14 @@ public class BCCDeployment {
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
 			navigateTo(driver, lnkCAProjects);
-			searchProject(driver, strProjectAbacosName);
+			searchProject(strProjectAbacosName);
 		} else if (isAbacosInToDo && !isOldPromoInToDo) {
 			System.out.println(strOldPromoProject + " is not available in ToDo, Going to Search it");
 			navigateToHome();
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
 			navigateTo(driver, lnkCAProjects);
-			searchProject(driver, strOldPromoProject);
+			searchProject(strOldPromoProject);
 		} else {
 			System.out.println("Going to Search Projects  " + strProjectAbacosName + " and " + strOldPromoProject);
 			navigateToHome();
@@ -302,11 +302,11 @@ public class BCCDeployment {
 	public void searchProject(String strProjectAbacosName,String strOldPromoProject) 
 	{
 		System.out.println("Ready to Search Projects  " + strProjectAbacosName	+ " and " + strOldPromoProject);
-		searchProject(driver, strProjectAbacosName);
+		searchProject(strProjectAbacosName);
 		
 		navigateToAvailableProjects();
 		
-		searchProject(driver, strOldPromoProject);
+		searchProject(strOldPromoProject);
 		//navigateToHome();
 		//navigateToCA_Console();
 	}
@@ -362,23 +362,20 @@ public class BCCDeployment {
 			WebElement lblSnapshot = driver.findElement(By.xpath("//*[@id=\"adminDeployment\"]/table/tbody/tr[2]/td[5]/span"));
 			String currentSnapshot = lblSnapshot.getText();
 			System.out.println("Current Snapshot is - "+currentSnapshot);
-			StringBuilder snapshotString = new StringBuilder(currentSnapshot);
-			snapshotString.insert(0, "<td class=\"rightAligned\"><span class=\"tableInfo\">");
-			snapshotString.append("</span></td>");
+			StringBuilder sb = new StringBuilder(currentSnapshot);
+			sb.insert(0, "<td class=\"rightAligned\"><span class=\"tableInfo\">");
+			sb.append("</span></td>");
 			//System.out.println("Uppended string is "+snapshotString);
-			String str = snapshotString.toString();
-			System.out.println("Got String from builder "+str);
+			String snapshotString = sb.toString();
+			System.out.println("Got String from builder "+snapshotString);
 			
 			String pageSource = driver.getPageSource();
 			//System.out.println(pageSource);
 
 	        int ind,snapshotCount=0,agentStatusCount=0;
-	        for(int i=0; i+str.length()<=pageSource.length(); i++)    //i+sub.length() is used to reduce comparisons
+	        for(int i=0; i+snapshotString.length()<=pageSource.length(); i++)    //i+sub.length() is used to reduce comparisons
 	        {
-	        	//int indexOf(substring,fromIndex);
-	            //ind = pageSource.indexOf(snapshotString, i);
-	        	
-	            ind=pageSource.indexOf(str, i);
+	            ind=pageSource.indexOf(snapshotString, i);
 	            if(ind>=0)
 	            {
 	                snapshotCount++;
@@ -387,7 +384,7 @@ public class BCCDeployment {
 	                ind=-1;
 	            }
 	        }
-	        System.out.println("Total number of snapshot '"+currentSnapshot+"'  in Agents is  "+snapshotCount);
+	        System.out.println("Total number of Snapshot '"+currentSnapshot+"'  in Agents is  "+snapshotCount);
 	        System.out.println("Total number of Idle Agents is  "+agentStatusCount);
 	        
 	        if(environment.equals("HMG02"))
@@ -425,14 +422,14 @@ public class BCCDeployment {
 		}
 	}
 	
-	public void searchProject(WebDriver driver2, String searchProjectName) 
+	public void searchProject(String searchProjectName) 
 	{
-		WebElement searchBox = driver2.findElement(By
+		WebElement searchBox = driver.findElement(By
 				.name("/atg/epub/servlet/ProcessSearchFormHandler.textInput"));
 		searchBox.clear();
 		searchBox.sendKeys(searchProjectName);
-		WebElement lnkGo = driver2.findElement(By.className("goButton")); 
-		JavascriptExecutor jse = (JavascriptExecutor)driver2;
+		WebElement lnkGo = driver.findElement(By.className("goButton")); 
+		JavascriptExecutor jse = (JavascriptExecutor)driver;
 		jse.executeScript("arguments[0].scrollIntoView()", lnkGo);
 		System.out.println(lnkGo.getText());
 		try {
@@ -442,7 +439,7 @@ public class BCCDeployment {
 			interuptE.printStackTrace();
 		}
 		
-		boolean isProjectNotFound = driver2.findElements(By.tagName("img")).size() < 1;
+		boolean isProjectNotFound = driver.findElements(By.tagName("img")).size() < 1;
 		//boolean isProjectNotFound = driver2.findElements(By.tagName("img")).
 		//boolean isProjectNotFound = driver2.findElements(By.cssSelector("input[class='centerAligned error']")).size() < 1;
 		
@@ -455,17 +452,17 @@ public class BCCDeployment {
 		else 
 		{
 			System.out.println("Project Found...");
-			WebElement projectFound = driver2.findElement(By.tagName("img"));
-			boolean isCurrentTaskAvailable = driver2.findElements(
+			WebElement projectFound = driver.findElement(By.tagName("img"));
+			boolean isCurrentTaskAvailable = driver.findElements(
 					By.className("current")).size() < 1;
 			if (!isCurrentTaskAvailable) {
-				WebElement currentTask = driver2.findElement(By
+				WebElement currentTask = driver.findElement(By
 						.className("current"));
-				highLightElement(driver2, currentTask);
+				highLightElement(driver, currentTask);
 				String strCurrentTask = currentTask.getText();
 				System.out.println("Current Task is = " + strCurrentTask);
 				projectFound.click();
-				selectProjectAction(driver2, strCurrentTask);
+				selectProjectAction(driver, strCurrentTask);
 			}
 		}
 	}

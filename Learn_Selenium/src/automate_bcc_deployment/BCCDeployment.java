@@ -44,26 +44,7 @@ public class BCCDeployment {
 		openBCCUrl();
 	}
 
-	public void highLightElement(WebDriver driver, WebElement webElement) 
-	{
-		String DELAY = "delay";
-		JavascriptExecutor js = (JavascriptExecutor) driver;
-		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",
-				webElement, "color: green; border: 4px solid green;");
-		try {
-			int time = 500;
-			if (System.getProperty(DELAY) != null) {
-				time = Integer.parseInt(System.getProperty(DELAY));
-			}
-			Thread.sleep(time);
-		} catch (InterruptedException ie) {
-			ie.printStackTrace();
-		} catch (NumberFormatException numForE) {
-			numForE.printStackTrace();
-		}
-		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",
-				webElement, "");
-	}
+	
 
 	public void openBCCUrl() 
 	{
@@ -224,7 +205,13 @@ public class BCCDeployment {
 		highLightElement(driver, btnDeploy);
 		//btnDeploy.click();
 		navigateToDetaisTab();
-		monitorDeployment();
+		try {
+			Thread.sleep(1000);
+			monitorDeployment();
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	public void navigateToDetaisTab()
@@ -510,7 +497,6 @@ public class BCCDeployment {
 	}
 
 	public void navigateTo(WebDriver driver2, WebElement navElement) {
-		System.out.println(navElement.getText() + " found, highlighting it");
 		try {
 			((JavascriptExecutor) driver).executeScript(
 					"arguments[0].scrollIntoView(true);", navElement);
@@ -530,6 +516,27 @@ public class BCCDeployment {
 			return false;
 	}
 
+	public void highLightElement(WebDriver driver, WebElement webElement) 
+	{
+		String DELAY = "delay";
+		JavascriptExecutor js = (JavascriptExecutor) driver;
+		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",
+				webElement, "color: green; border: 4px solid green;");
+		try {
+			int time = 500;
+			if (System.getProperty(DELAY) != null) {
+				time = Integer.parseInt(System.getProperty(DELAY));
+			}
+			Thread.sleep(time);
+		} catch (InterruptedException ie) {
+			ie.printStackTrace();
+		} catch (NumberFormatException numForE) {
+			numForE.printStackTrace();
+		}
+		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",
+				webElement, "");
+	}
+	
 	public static void main(String[] args) throws FileNotFoundException {
 		BCCDeployment deploy = new BCCDeployment();
 		deploy.startDeploymentProcess();

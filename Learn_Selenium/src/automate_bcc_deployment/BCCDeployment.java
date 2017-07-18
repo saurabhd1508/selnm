@@ -63,11 +63,11 @@ public class BCCDeployment {
 			environment = "AR_Production";
 		}
 		boolean isBccOK = driver.findElements(By.tagName("input")).size() > 1;
-		System.out.println(isBccOK+" BCC is working fine");
 		if (isBccOK) {
+			System.out.println("'"+isBccOK+"' BCC is working fine");
 			loginToBCC();
 		} else {
-			System.out.println("BCC is down or something is wrong with BCC, please check it... Closing Program");
+			System.out.println("'"+isBccOK+"' BCC is down or something is wrong with BCC, please check it... Closing Program");
 			System.exit(0);
 		}
 	}
@@ -204,7 +204,7 @@ public class BCCDeployment {
 		optNow.click();
 		WebElement btnDeploy = driver.findElement(By.linkText("Deploy"));
 		highLightElement(driver, btnDeploy);
-		//btnDeploy.click();
+		btnDeploy.click();
 		navigateToDetaisTab();
 		try {
 			Thread.sleep(1000);
@@ -222,7 +222,15 @@ public class BCCDeployment {
 	
 	public void monitorDeployment()
 	{
-		
+		System.out.println("Monitoring Deployment...");
+		WebElement progressBar = driver.findElement(By.id("progressBar"));
+		System.out.println(progressBar.getText());
+		if(progressBar.getText().equals("Deployment Progress"))
+		{
+			System.out.println("Deployment is going on");
+		}
+		else
+			System.out.println("Deployment have some issue");
 	}
 	
 	public void isDeploymentResumed() {
@@ -262,35 +270,45 @@ public class BCCDeployment {
 		isAbacosInToDo = checkProjectsInToDo(driver, strProjectAbacosName);
 		isOldPromoInToDo = checkProjectsInToDo(driver, strOldPromoProject);
 
-		if (isAbacosInToDo) {
-			WebElement foundAbacosProject = driver.findElement(By
-					.partialLinkText(strProjectAbacosName));
+		if (isAbacosInToDo && isOldPromoInToDo) 
+		{
+			WebElement foundAbacosProject = driver.findElement(By.partialLinkText(strProjectAbacosName));
 			highLightElement(driver, foundAbacosProject);
-			System.out.println("Project " + foundAbacosProject.getText()
-					+ " available in ToDo");
+						
+			WebElement foundOldPromoProject = driver.findElement(By.partialLinkText(strOldPromoProject));
+			highLightElement(driver, foundOldPromoProject);
+			
+			System.out.println("Both Projects '" + foundAbacosProject.getText()+"' And '"+foundOldPromoProject.getText()+ "' available in ToDo");
+			startDeployment();
 		}
-		if (isOldPromoInToDo) {
+		/*else if (isAbacosInToDo) 
+		{
+			WebElement foundAbacosProject = driver.findElement(By.partialLinkText(strProjectAbacosName));
+			highLightElement(driver, foundAbacosProject);
+			System.out.println("Project " + foundAbacosProject.getText()+ " available in ToDo");
+		}
+		else if (isOldPromoInToDo) {
 			WebElement foundOldPromoProject = driver.findElement(By
 					.partialLinkText(strOldPromoProject));
 			highLightElement(driver, foundOldPromoProject);
 			System.out.println("Project " + foundOldPromoProject.getText()
 					+ " available in ToDo");
-		} else if (!isAbacosInToDo && isOldPromoInToDo) {
-			System.out.println(strProjectAbacosName +" is not available in ToDo, Going to Search it");
+		}*/ else if (!isAbacosInToDo && isOldPromoInToDo) {
+			System.out.println("'"+strProjectAbacosName +"' is not available in ToDo, Going to Search it");
 			navigateToHome();
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
 			navigateTo(driver, lnkCAProjects);
 			searchProject(strProjectAbacosName);
 		} else if (isAbacosInToDo && !isOldPromoInToDo) {
-			System.out.println(strOldPromoProject + " is not available in ToDo, Going to Search it");
+			System.out.println("'"+strOldPromoProject + "' is not available in ToDo, Going to Search it");
 			navigateToHome();
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
 			navigateTo(driver, lnkCAProjects);
 			searchProject(strOldPromoProject);
 		} else {
-			System.out.println("Going to Search Projects  " + strProjectAbacosName + " and " + strOldPromoProject);
+			System.out.println("Going to Search Projects  '" + strProjectAbacosName + "'  And  '" + strOldPromoProject+"'");
 			navigateToHome();
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
@@ -301,14 +319,14 @@ public class BCCDeployment {
 
 	public void searchProject(String strProjectAbacosName,String strOldPromoProject) 
 	{
-		System.out.println("Ready to Search Projects  " + strProjectAbacosName	+ " and " + strOldPromoProject);
+		System.out.println("Ready to Search Projects  '" + strProjectAbacosName	+ "'  And  '" + strOldPromoProject+"'");
 		searchProject(strProjectAbacosName);
 		
 		navigateToAvailableProjects();
 		
 		searchProject(strOldPromoProject);
-		//navigateToHome();
-		//navigateToCA_Console();
+		navigateToHome();
+		navigateToCA_Console();
 	}
 	
 	public void navigateToPlanTab()
@@ -367,7 +385,7 @@ public class BCCDeployment {
 			sb.append("</span></td>");
 			//System.out.println("Uppended string is "+snapshotString);
 			String snapshotString = sb.toString();
-			System.out.println("Got String from builder "+snapshotString);
+			//System.out.println("Got String from builder "+snapshotString);
 			
 			String pageSource = driver.getPageSource();
 			//System.out.println(pageSource);
@@ -384,8 +402,8 @@ public class BCCDeployment {
 	                ind=-1;
 	            }
 	        }
-	        System.out.println("Total number of Snapshot '"+currentSnapshot+"'  in Agents is  "+snapshotCount);
-	        System.out.println("Total number of Idle Agents is  "+agentStatusCount);
+	        System.out.println("Total number of Snapshot '"+currentSnapshot+"'  in Agents is = '"+snapshotCount+"'");
+	        System.out.println("Total number of Idle Agents is = '"+agentStatusCount+"'");
 	        
 	        if(environment.equals("HMG02"))
 	        {

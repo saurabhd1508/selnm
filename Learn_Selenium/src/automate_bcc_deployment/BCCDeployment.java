@@ -5,6 +5,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -12,7 +14,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
-public class BCCDeployment {
+public class BCCDeployment{
 
 	Properties prop = new Properties();
 	WebDriver driver;
@@ -20,6 +22,7 @@ public class BCCDeployment {
 	String strOldPromoProject;
 	ProjectActions actions;
 	String environment=null;
+	
 	public void startDeploymentProcess() throws FileNotFoundException 
 	{
 		initializeProperties();
@@ -45,8 +48,6 @@ public class BCCDeployment {
 		openBCCUrl();
 	}
 
-	
-
 	public void openBCCUrl() 
 	{
 		driver.get(prop.getProperty("BaseUrlHMG"));
@@ -63,7 +64,8 @@ public class BCCDeployment {
 			environment = "AR_Production";
 		}
 		boolean isBccOK = driver.findElements(By.tagName("input")).size() > 1;
-		if (isBccOK) {
+		if (isBccOK) 
+		{
 			System.out.println("'"+isBccOK+"' BCC is working fine");
 			loginToBCC();
 		} else {
@@ -86,6 +88,14 @@ public class BCCDeployment {
 			txtPass = driver.findElement(By.id("loginPassword"));
 			pass = prop.getProperty("HMGpassword");
 			txtPass.sendKeys(pass);
+			
+			//monitorDeployment();
+			
+			//Temp
+			/*TimerTask timerTask = new BCCDeployment();
+			Timer timer = new Timer(true);
+			timer.schedule(timerTask, 0, 1000);*/
+			
 		}
 		if(environment.equals("BR_Production"))
 		{
@@ -108,6 +118,7 @@ public class BCCDeployment {
 			txtPass.sendKeys(pass);
 		}
 		btnLogin = driver.findElement(By.name(prop.getProperty("btnLogin")));
+		
 		btnLogin.click();
 
 		chkHomeUrl = driver.getCurrentUrl();
@@ -116,7 +127,7 @@ public class BCCDeployment {
 			System.out.println("Logged in to BCC");
 		else
 			System.out.println("Not able to LogIn to BCC, Somthing is worng...");
-
+		
 		try {
 			Thread.sleep(3000);
 			navigateToCA_Console();
@@ -124,7 +135,7 @@ public class BCCDeployment {
 			interuptE.printStackTrace();
 		}
 	}
-
+	
 	public void navigateToCA_Console() {
 		WebElement lnkCAConsole;
 		System.out.println("Searching CA Console");
@@ -206,6 +217,12 @@ public class BCCDeployment {
 		highLightElement(driver, btnDeploy);
 		btnDeploy.click();
 		navigateToDetaisTab();
+		
+		//Scheduling Deployment monitor
+		/*TimerTask timerTask = new BCCDeployment();
+		Timer timer = new Timer(true);
+		timer.scheduleAtFixedRate(timerTask, 0, 10*1000);*/
+		
 		try {
 			Thread.sleep(1000);
 			monitorDeployment();
@@ -214,23 +231,78 @@ public class BCCDeployment {
 		}
 	}
 	
-	public void navigateToDetaisTab()
+	/*public void run() 
 	{
-		WebElement lnkDetails = driver.findElement(By.linkText("Details"));
-		lnkDetails.click();
-	}
+		//monitorDeployment();
+		WebElement txtPass = driver.findElement(By.id("loginPassword"));
+		String pass = prop.getProperty("HMGpassword");
+		txtPass.clear();
+	}*/
 	
 	public void monitorDeployment()
 	{
 		System.out.println("Monitoring Deployment...");
 		WebElement progressBar = driver.findElement(By.id("progressBar"));
 		System.out.println(progressBar.getText());
-		if(progressBar.getText().equals("Deployment Progress"))
+		while(true)
 		{
-			System.out.println("Deployment is going on");
+			String pageSource = driver.getPageSource();
+			//if(progressBar.getText().equals("Deployment Progress"))
+			if(pageSource.contains("Deployment Failed"))
+			{
+				System.out.println("Deployment Failed...!!! Please stop it...");
+				break;
+			}
+			else if(pageSource.contains("Please refresh the page"))
+			{
+				System.out.println("Deployment is completed...Please accept projects.");
+				break;
+			}
+			else
+			{	
+				try {
+					Thread.sleep(5000);
+					System.out.println("\nDeployment is going on");
+					System.out.println((driver.findElement(By.id("progressBar")).getText()));
+					highLightElementProgressBar();
+				} catch (InterruptedException e) 
+				{
+					e.printStackTrace();
+				}
+			}
 		}
-		else
-			System.out.println("Deployment have some issue");
+		deploymentCompleted();
+	}
+	
+	public void deploymentCompleted()
+	{
+		System.out.println("In Deployment completed...");
+	}
+	
+	public void highLightElementProgressBar() 
+	{
+		WebElement progressBar = driver.findElement(By.id("progressBar"));
+		String DELAY = "delay";
+		JavascriptExecutor js = (JavascriptExecutor) driver;
+		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",progressBar, "color: green; border: 4px solid green;");
+		try {
+			int time = 500;
+			if (System.getProperty(DELAY) != null) {
+				time = Integer.parseInt(System.getProperty(DELAY));
+			}
+			Thread.sleep(time);
+		} catch (InterruptedException ie) {
+			ie.printStackTrace();
+		} catch (NumberFormatException numForE) {
+			numForE.printStackTrace();
+		}
+		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",progressBar, "");
+	}
+	
+	public void navigateToDetaisTab()
+	{
+		WebElement lnkDetails = driver.findElement(By.linkText("Details"));
+		lnkDetails.click();
 	}
 	
 	public void isDeploymentResumed() {
@@ -390,16 +462,22 @@ public class BCCDeployment {
 			String pageSource = driver.getPageSource();
 			//System.out.println(pageSource);
 
-	        int ind,snapshotCount=0,agentStatusCount=0;
-	        for(int i=0; i+snapshotString.length()<=pageSource.length(); i++)    //i+sub.length() is used to reduce comparisons
+	        int ind1,ind2,snapshotCount=0,agentStatusCount=0;
+	        for(int i=0,j=0; i+snapshotString.length()<=pageSource.length(); i++,j++)    //i+sub.length() is used to reduce comparisons
 	        {
-	            ind=pageSource.indexOf(snapshotString, i);
-	            if(ind>=0)
+	            ind1 = pageSource.indexOf(snapshotString, i);
+	            ind2 = pageSource.indexOf("Idle", j); 
+	            if(ind1>=0)
 	            {
 	                snapshotCount++;
-	                agentStatusCount++;
-	                i=ind;
-	                ind=-1;
+	                i=ind1;
+	                ind1=-1;
+	            }
+	            if(ind2>=0)
+	            {
+	            	agentStatusCount++;
+	            	j=ind2;
+	                ind2=-1;
 	            }
 	        }
 	        System.out.println("Total number of Snapshot '"+currentSnapshot+"'  in Agents is = '"+snapshotCount+"'");
@@ -412,7 +490,10 @@ public class BCCDeployment {
 	        		System.out.println("Agents health is OK and we are good to start deployment");
 	        	}
 	        	else
+	        	{
 	        		System.out.println("Something is wrong with Agents. Please check");
+	        		System.exit(0);
+	        	}
 	        }
 	        //else if(driver.getCurrentUrl().contains(prop.getProperty("curBCCurlBR")))
 	        else if(environment.equals("BR_Production"))
@@ -535,8 +616,7 @@ public class BCCDeployment {
 	{
 		String DELAY = "delay";
 		JavascriptExecutor js = (JavascriptExecutor) driver;
-		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",
-				webElement, "color: green; border: 4px solid green;");
+		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",webElement, "color: green; border: 4px solid green;");
 		try {
 			int time = 500;
 			if (System.getProperty(DELAY) != null) {

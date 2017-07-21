@@ -124,6 +124,7 @@ public class ProjectActions {
 		btnGo.click();
 		WebElement frmWorkFlow = driver2.findElement(By.id("workflowIframe"));
 		deployment.switchToIFrame(driver2, frmWorkFlow);
+		approveForProductionDeployment(driver2);
 	}
 
 	// Revert Assets on Staging Immediately

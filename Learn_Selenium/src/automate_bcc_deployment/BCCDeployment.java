@@ -5,8 +5,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
-import java.util.Timer;
-import java.util.TimerTask;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
@@ -14,14 +12,19 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
-public class BCCDeployment{
-
+public class BCCDeployment
+{
+	private WebDriver driver;
+	private String strProjectAbacosName;
+	private String strOldPromoProject;
+	private String environment=null;
+	private boolean firstVisitToProdOverview = false; 
+	private boolean isAbacosInToDo = false;
+	private boolean isOldPromoInToDo = false;
+	
+	
 	Properties prop = new Properties();
-	WebDriver driver;
-	String strProjectAbacosName;
-	String strOldPromoProject;
 	ProjectActions actions;
-	String environment=null;
 	
 	public void startDeploymentProcess() throws FileNotFoundException 
 	{
@@ -50,7 +53,9 @@ public class BCCDeployment{
 
 	public void openBCCUrl() 
 	{
-		driver.get(prop.getProperty("BaseUrlHMG"));
+		//BCC Url
+		driver.get(prop.getProperty("BaseUrlAR"));
+		
 		if(driver.getCurrentUrl().contains("hmg02"))
 		{
 			environment = "HMG02"; 
@@ -63,7 +68,9 @@ public class BCCDeployment{
 		{
 			environment = "AR_Production";
 		}
+		
 		boolean isBccOK = driver.findElements(By.tagName("input")).size() > 1;
+		
 		if (isBccOK) 
 		{
 			System.out.println("'"+isBccOK+"' BCC is working fine");
@@ -74,8 +81,9 @@ public class BCCDeployment{
 		}
 	}
 
-	public void loginToBCC() {
-		System.out.println("on Login Page");
+	public void loginToBCC() 
+	{
+		//System.out.println("on Login Page");
 		WebElement txtuser, txtPass, btnLogin;
 		String chkHomeUrl, uName, pass;
 		
@@ -140,22 +148,21 @@ public class BCCDeployment{
 		WebElement lnkCAConsole;
 		System.out.println("Searching CA Console");
 		lnkCAConsole = driver.findElement(By.linkText("CA Console"));
-		navigateTo(driver, lnkCAConsole);
+		navigateTo(lnkCAConsole);
 		checkProdOverView();
 	}
 	
-	boolean firstVisitToProdOverview = false; 
-	
 	public void checkProdOverView() 
 	{
+		//Set Project's names
 		strProjectAbacosName = prop.getProperty("strProjectAbacosName");
 		strOldPromoProject = prop.getProperty("strProjectOldPromoName");
+		
 		if(!firstVisitToProdOverview)
 		{
 			firstVisitToProdOverview=true;
 			WebElement lnkProdOverview;
 			String prodOverviewStr=null;
-			//String currentUrl = driver.getCurrentUrl();
 			boolean prodOverview = false;
 			//if(currentUrl.contains("hmg"))
 			if(environment.equals("HMG02"))
@@ -251,11 +258,13 @@ public class BCCDeployment{
 			if(pageSource.contains("Deployment Failed"))
 			{
 				System.out.println("Deployment Failed...!!! Please stop it...");
+				stopDeployment();
+				haltDeployment();
 				break;
 			}
 			else if(pageSource.contains("Please refresh the page"))
 			{
-				System.out.println("Deployment is completed...Please accept projects.");
+				
 				break;
 			}
 			else
@@ -274,11 +283,25 @@ public class BCCDeployment{
 		deploymentCompleted();
 	}
 	
-	public void deploymentCompleted()
+	public void stopDeployment()
 	{
-		System.out.println("In Deployment completed...");
+		System.out.println("Stopping Deployment");
+	}
+
+	public void haltDeployment()
+	{
+		System.out.println("Halting Deployment");
 	}
 	
+	public void deploymentCompleted()
+	{
+		System.out.println("Deployment is completed...Please accept projects.");
+	}
+	
+	public void acceptProjects()
+	{
+		
+	}
 	public void highLightElementProgressBar() 
 	{
 		WebElement progressBar = driver.findElement(By.id("progressBar"));
@@ -296,7 +319,8 @@ public class BCCDeployment{
 		} catch (NumberFormatException numForE) {
 			numForE.printStackTrace();
 		}
-		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",progressBar, "");
+		//progressBar = driver.findElement(By.id("progressBar"));
+		js.executeScript("arguments[0].setAttribute('style', arguments[1]);",driver.findElement(By.id("progressBar")), "");
 	}
 	
 	public void navigateToDetaisTab()
@@ -308,7 +332,7 @@ public class BCCDeployment{
 	public void isDeploymentResumed() {
 		WebElement btnResumeDeployment;
 		boolean isResumed = driver.findElements(By.partialLinkText("Resume ")).size() < 1;
-		System.out.println(isResumed);
+		//System.out.println(isResumed);
 		if (isResumed) {
 			System.out.println("Deployments Already Resumed");
 			navigateToAgents();
@@ -330,9 +354,6 @@ public class BCCDeployment{
 			navigateToDoTab();
 		}
 	}
-
-	boolean isAbacosInToDo = false;
-	boolean isOldPromoInToDo = false;
 
 	public void navigateToDoTab() {
 		WebElement lnkToDoTab;
@@ -370,28 +391,28 @@ public class BCCDeployment{
 			navigateToHome();
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
-			navigateTo(driver, lnkCAProjects);
+			navigateTo(lnkCAProjects);
 			searchProject(strProjectAbacosName);
 		} else if (isAbacosInToDo && !isOldPromoInToDo) {
 			System.out.println("'"+strOldPromoProject + "' is not available in ToDo, Going to Search it");
 			navigateToHome();
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
-			navigateTo(driver, lnkCAProjects);
+			navigateTo(lnkCAProjects);
 			searchProject(strOldPromoProject);
 		} else {
 			System.out.println("Going to Search Projects  '" + strProjectAbacosName + "'  And  '" + strOldPromoProject+"'");
 			navigateToHome();
 			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
 			// searchProject();
-			navigateTo(driver, lnkCAProjects);
+			navigateTo(lnkCAProjects);
 			searchProject(strProjectAbacosName, strOldPromoProject);
 		}
 	}
 
 	public void searchProject(String strProjectAbacosName,String strOldPromoProject) 
 	{
-		System.out.println("Ready to Search Projects  '" + strProjectAbacosName	+ "'  And  '" + strOldPromoProject+"'");
+		//System.out.println("Ready to Search Projects  '" + strProjectAbacosName	+ "'  And  '" + strOldPromoProject+"'");
 		searchProject(strProjectAbacosName);
 		
 		navigateToAvailableProjects();
@@ -411,32 +432,38 @@ public class BCCDeployment{
 			System.out.println("No projects in Plan tab");
 		else
 		{
-			System.out.println("There are projects availabel in Plan tab... Please cancel them");
-			WebElement selectAll = driver.findElement(By.id("checkAllField"));
-			selectAll.click();
-			WebElement btnCancelSelected = driver.findElement(By.linkText("Cancel selected"));
-			btnCancelSelected.click();
-			WebElement frmCancelDeployment = driver.findElement(By.id("cancelDeploymentsActionIframe"));
-
-			driver.switchTo().frame(frmCancelDeployment);
-			WebElement btnOK = driver.findElement(By.linkText("OK"));
-			btnOK.click();
-			try {
-				Thread.sleep(3000);
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-			if((driver.findElements(By.tagName("img")).size() < 1))
-			{
-				System.out.println("Projects cancelled...");
-			}
+			cancelProjectsFromPlan();
 		}
 	}
+	
+	public void cancelProjectsFromPlan()
+	{
+		System.out.println("There are projects availabel in Plan tab... Please cancel them");
+		WebElement selectAll = driver.findElement(By.id("checkAllField"));
+		selectAll.click();
+		WebElement btnCancelSelected = driver.findElement(By.linkText("Cancel selected"));
+		btnCancelSelected.click();
+		WebElement frmCancelDeployment = driver.findElement(By.id("cancelDeploymentsActionIframe"));
+
+		driver.switchTo().frame(frmCancelDeployment);
+		WebElement btnOK = driver.findElement(By.linkText("OK"));
+		btnOK.click();
+		try {
+			Thread.sleep(3000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		if((driver.findElements(By.tagName("img")).size() < 1))
+		{
+			System.out.println("Projects cancelled...");
+		}
+	}
+	
 	public void navigateToAvailableProjects()
 	{
 		//« Available projects
 		WebElement availableProjects = driver.findElement(By.partialLinkText("Available projects"));
-		navigateTo(driver,availableProjects);
+		navigateTo(availableProjects);
 	}
 	public void navigateToHome() {
 		WebElement lnkHome = driver.findElement(By.linkText("Home"));
@@ -451,7 +478,7 @@ public class BCCDeployment{
 			Thread.sleep(3000);
 			WebElement lblSnapshot = driver.findElement(By.xpath("//*[@id=\"adminDeployment\"]/table/tbody/tr[2]/td[5]/span"));
 			String currentSnapshot = lblSnapshot.getText();
-			System.out.println("Current Snapshot is - "+currentSnapshot);
+			System.out.println("Current Snapshot is - '"+currentSnapshot+"'");
 			StringBuilder sb = new StringBuilder(currentSnapshot);
 			sb.insert(0, "<td class=\"rightAligned\"><span class=\"tableInfo\">");
 			sb.append("</span></td>");
@@ -530,7 +557,7 @@ public class BCCDeployment{
 		WebElement lnkGo = driver.findElement(By.className("goButton")); 
 		JavascriptExecutor jse = (JavascriptExecutor)driver;
 		jse.executeScript("arguments[0].scrollIntoView()", lnkGo);
-		System.out.println(lnkGo.getText());
+		//System.out.println(lnkGo.getText());
 		try {
 			Thread.sleep(3000);
 			lnkGo.click();
@@ -577,13 +604,39 @@ public class BCCDeployment{
 			//actions.approveContent(driver2, drpActions, btnGo);
 			//actions.approveForStagingDeployment(driver2, drpActions, btnGo);
 			actions.reviewProject(driver2);
+			navigateToHome();
+			navigateToCA_Console();
+			navigateToDeploymentOverview();
 		} else if (strCurrentTask.equals("Content Review")) {
 			//actions.approveContent(driver2, drpActions, btnGo);
 		} else if (strCurrentTask.equals("Approve for Deployment")) {
 			//actions.approveForStagingDeployment(driver2, drpActions, btnGo);
-			//approveForStagingDeployment(driver2);
-			actions.approveForProductionDeployment(driver2);
+			if(environment.equals("BR_Production") || environment.equals("AR_Production"))
+				actions.approveForStagingDeployment(driver2);
+			else if(environment.equals("HMG02"))
+				actions.approveForProductionDeployment(driver2);
+		}else if(strCurrentTask.equals("Verify Staging Deployment"))
+		{
+			actions.acceptStagingDeployment(driver2);;
 		}
+	}
+	
+	public void navigateToDeploymentOverview()
+	{
+		WebElement lnkDeploymentOverview = driver.findElement(By.partialLinkText("back to deployment overview"));
+		highLightElement(driver, lnkDeploymentOverview);
+		lnkDeploymentOverview.click();
+		navigateToStage();
+	}
+	
+	public void navigateToStage()
+	{
+		//prodOverviewStr = prop.getProperty("prodOverviewXpathAR");
+		//prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("ARProdTar"));
+		WebElement lnkStageOverview = driver.findElement(By.linkText("Staging"));
+		highLightElement(driver, lnkStageOverview);
+		lnkStageOverview.click();
+		isDeploymentResumed();
 	}
 	
 	public void switchToIFrame(WebDriver driver2, WebElement frmID) {
@@ -592,7 +645,7 @@ public class BCCDeployment{
 		btnOK.click();
 	}
 
-	public void navigateTo(WebDriver driver2, WebElement navElement) {
+	public void navigateTo(WebElement navElement) {
 		try {
 			((JavascriptExecutor) driver).executeScript(
 					"arguments[0].scrollIntoView(true);", navElement);

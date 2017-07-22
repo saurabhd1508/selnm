@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
+import org.apache.commons.lang3.ArrayUtils;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -54,7 +55,7 @@ public class BCCDeployment
 	public void openBCCUrl() 
 	{
 		//BCC Url
-		driver.get(prop.getProperty("BaseUrlAR"));
+		driver.get(prop.getProperty("BaseUrlHMG"));
 		
 		if(driver.getCurrentUrl().contains("hmg02"))
 		{
@@ -183,17 +184,19 @@ public class BCCDeployment
 				prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("ARProdTar"));
 			}
 			
-		// boolean stageOverview =
-		// driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("ProductionProdTar"));
-		if (prodOverview) {
-			System.out.println("Production overview found");
-			lnkProdOverview = driver.findElement(By.linkText("Production"));
-			highLightElement(driver, lnkProdOverview);
-			lnkProdOverview.click();
-			isDeploymentResumed();
-		} 
-		else
-			System.out.println("Prod link NOT found");
+			// boolean stageOverview =
+			// driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("ProductionProdTar"));
+			if (prodOverview) 
+			{
+				System.out.println("Production overview found");
+				lnkProdOverview = driver.findElement(By.linkText("Production"));
+				highLightElement(driver, lnkProdOverview);
+				lnkProdOverview.click();
+				//isDeploymentResumed();
+				navigateToPlanTab();
+			} 
+			else
+				System.out.println("Prod link NOT found");
 		}
 		else
 		{
@@ -264,7 +267,7 @@ public class BCCDeployment
 			}
 			else if(pageSource.contains("Please refresh the page"))
 			{
-				
+				deploymentCompleted();
 				break;
 			}
 			else
@@ -280,27 +283,44 @@ public class BCCDeployment
 				}
 			}
 		}
-		deploymentCompleted();
+		//deploymentCompleted();
 	}
 	
 	public void stopDeployment()
 	{
 		System.out.println("Stopping Deployment");
+		WebElement btnStop = driver.findElement(By.linkText("Stop"));
+		btnStop.click();
+		WebElement frmStop = driver.findElement(By.id("stopDeploymentActionIframe"));
+		driver.switchTo().frame(frmStop);
+		WebElement btnOk = driver.findElement(By.linkText("OK"));
+		btnOk.click();
 	}
 
 	public void haltDeployment()
 	{
 		System.out.println("Halting Deployment");
+		WebElement btnHaltDeployments = driver.findElement(By.linkText("Halt deployments"));
+		btnHaltDeployments.click();
+		WebElement frmHaltDeploy = driver.findElement(By.id("haltSiteActionIframe"));
+		driver.switchTo().frame(frmHaltDeploy);
+		WebElement btnOk = driver.findElement(By.linkText("OK"));
+		btnOk.click();
+		boolean isHalted = driver.findElements(By.linkText("Resume deployments")).size() >= 1;
+		if(isHalted)
+			System.out.println("Deployments Halted");
 	}
 	
 	public void deploymentCompleted()
 	{
-		System.out.println("Deployment is completed...Please accept projects.");
+		System.out.println("Deployment Completed");
+		driver.navigate().refresh();
+		haltDeployment();
+		acceptProjects();
 	}
 	
 	public void acceptProjects()
 	{
-		
 	}
 	public void highLightElementProgressBar() 
 	{
@@ -428,11 +448,26 @@ public class BCCDeployment
 		WebElement planTab = driver.findElement(By.linkText("Plan"));
 		planTab.click();
 		boolean isPlanEmpty = driver.findElements(By.tagName("img")).size() < 1;
+		
 		if(isPlanEmpty)
 			System.out.println("No projects in Plan tab");
 		else
 		{
-			cancelProjectsFromPlan();
+			int numberOfProjectsInPlan = driver.findElements(By.cssSelector("a[href*='project=prj']")).size();
+			System.out.println(numberOfProjectsInPlan +" Projects available in Plan");
+			
+			String [] projects = new String[numberOfProjectsInPlan];
+			
+			for(int i=0;;i++)
+			{
+				String projectName = driver.findElement(By.cssSelector("a[href*='project=prj']")).getText();
+				if(ArrayUtils.contains(projects, projectName))
+					System.out.println(projectName+" exists in array");
+				else
+				{
+					projects[i]=projectName;
+				}
+			}
 		}
 	}
 	
@@ -566,8 +601,6 @@ public class BCCDeployment
 		}
 		
 		boolean isProjectNotFound = driver.findElements(By.tagName("img")).size() < 1;
-		//boolean isProjectNotFound = driver2.findElements(By.tagName("img")).
-		//boolean isProjectNotFound = driver2.findElements(By.cssSelector("input[class='centerAligned error']")).size() < 1;
 		
 		if (isProjectNotFound) 
 		{
@@ -595,14 +628,7 @@ public class BCCDeployment
 	
 	public void selectProjectAction(WebDriver driver2, String strCurrentTask) 
 	{
-		//WebElement btnGo = driver2.findElement(By.partialLinkText("Go"));
-		
-		//ProjectActions actions = new ProjectActions(driver2,drpActions,strCurrentTask,btnGo);
-		
 		if (strCurrentTask.equals("Author")) {
-			//actions.reviewProject(driver2, drpActions, btnGo);
-			//actions.approveContent(driver2, drpActions, btnGo);
-			//actions.approveForStagingDeployment(driver2, drpActions, btnGo);
 			actions.reviewProject(driver2);
 			navigateToHome();
 			navigateToCA_Console();
@@ -610,7 +636,6 @@ public class BCCDeployment
 		} else if (strCurrentTask.equals("Content Review")) {
 			//actions.approveContent(driver2, drpActions, btnGo);
 		} else if (strCurrentTask.equals("Approve for Deployment")) {
-			//actions.approveForStagingDeployment(driver2, drpActions, btnGo);
 			if(environment.equals("BR_Production") || environment.equals("AR_Production"))
 				actions.approveForStagingDeployment(driver2);
 			else if(environment.equals("HMG02"))
@@ -631,8 +656,6 @@ public class BCCDeployment
 	
 	public void navigateToStage()
 	{
-		//prodOverviewStr = prop.getProperty("prodOverviewXpathAR");
-		//prodOverview = driver.findElement(By.xpath(prodOverviewStr)).getAttribute("href").contains(prop.getProperty("ARProdTar"));
 		WebElement lnkStageOverview = driver.findElement(By.linkText("Staging"));
 		highLightElement(driver, lnkStageOverview);
 		lnkStageOverview.click();

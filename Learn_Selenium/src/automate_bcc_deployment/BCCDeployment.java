@@ -4,6 +4,8 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 import org.apache.commons.lang3.ArrayUtils;
@@ -456,18 +458,16 @@ public class BCCDeployment
 			int numberOfProjectsInPlan = driver.findElements(By.cssSelector("a[href*='project=prj']")).size();
 			System.out.println(numberOfProjectsInPlan +" Projects available in Plan");
 			
-			String [] projects = new String[numberOfProjectsInPlan];
+			List<String> projectNames = new ArrayList<String>();
+			List<WebElement> allProjectsInPlan = driver.findElements(By.cssSelector("a[href*='project=prj']"));
 			
-			for(int i=0;;i++)
+			for(WebElement ele : allProjectsInPlan)
 			{
-				String projectName = driver.findElement(By.cssSelector("a[href*='project=prj']")).getText();
-				if(ArrayUtils.contains(projects, projectName))
-					System.out.println(projectName+" exists in array");
-				else
-				{
-					projects[i]=projectName;
-				}
+				System.out.println(ele.getText());
+				projectNames.add(ele.getText());
 			}
+			cancelProjectsFromPlan();
+			//searchProject(projectNames);
 		}
 	}
 	
@@ -488,7 +488,7 @@ public class BCCDeployment
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		if((driver.findElements(By.tagName("img")).size() < 1))
+		if((driver.findElements(By.cssSelector("a[href*='project=prj']")).size() < 1))
 		{
 			System.out.println("Projects cancelled...");
 		}

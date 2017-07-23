@@ -468,6 +468,10 @@ public class BCCDeployment
 			}
 			cancelProjectsFromPlan();
 			//searchProject(projectNames);
+			for(String prjName : projectNames)
+			{
+				searchProject(prjName);
+			}
 		}
 	}
 	

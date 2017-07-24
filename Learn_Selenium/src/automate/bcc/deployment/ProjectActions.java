@@ -1,4 +1,4 @@
-package automate_bcc_deployment;
+package automate.bcc.deployment;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;

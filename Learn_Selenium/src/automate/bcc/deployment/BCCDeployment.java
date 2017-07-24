@@ -1,4 +1,4 @@
-package automate_bcc_deployment;
+package automate.bcc.deployment;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -155,6 +155,12 @@ public class BCCDeployment
 		checkProdOverView();
 	}
 	
+	public void navigateToCA_Projects()
+	{
+		WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
+		navigateTo(lnkCAProjects);
+	}
+	
 	public void checkProdOverView() 
 	{
 		//Set Project's names
@@ -195,7 +201,9 @@ public class BCCDeployment
 				highLightElement(driver, lnkProdOverview);
 				lnkProdOverview.click();
 				//isDeploymentResumed();
+				navigateToAgents();
 				navigateToPlanTab();
+				navigateToDoTab();
 			} 
 			else
 				System.out.println("Prod link NOT found");
@@ -411,23 +419,17 @@ public class BCCDeployment
 		}*/ else if (!isAbacosInToDo && isOldPromoInToDo) {
 			System.out.println("'"+strProjectAbacosName +"' is not available in ToDo, Going to Search it");
 			navigateToHome();
-			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
-			// searchProject();
-			navigateTo(lnkCAProjects);
+			navigateToCA_Projects();
 			searchProject(strProjectAbacosName);
 		} else if (isAbacosInToDo && !isOldPromoInToDo) {
 			System.out.println("'"+strOldPromoProject + "' is not available in ToDo, Going to Search it");
 			navigateToHome();
-			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
-			// searchProject();
-			navigateTo(lnkCAProjects);
+			navigateToCA_Projects();
 			searchProject(strOldPromoProject);
 		} else {
 			System.out.println("Going to Search Projects  '" + strProjectAbacosName + "'  And  '" + strOldPromoProject+"'");
 			navigateToHome();
-			WebElement lnkCAProjects = driver.findElement(By.linkText("CA Projects"));
-			// searchProject();
-			navigateTo(lnkCAProjects);
+			navigateToCA_Projects();
 			searchProject(strProjectAbacosName, strOldPromoProject);
 		}
 	}
@@ -468,9 +470,12 @@ public class BCCDeployment
 			}
 			cancelProjectsFromPlan();
 			//searchProject(projectNames);
+			navigateToHome();
+			navigateToCA_Projects();
 			for(String prjName : projectNames)
 			{
 				searchProject(prjName);
+				navigateToAvailableProjects();
 			}
 		}
 	}

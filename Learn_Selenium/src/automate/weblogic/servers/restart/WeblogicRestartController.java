@@ -1,24 +1,26 @@
 package automate.weblogic.servers.restart;
 
 import java.awt.Dimension;
-import java.awt.FlowLayout;
 import java.awt.Image;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
+import java.util.Set;
 
+import javax.print.attribute.HashAttributeSet;
 import javax.swing.ImageIcon;
-import javax.swing.JButton;
 import javax.swing.JDialog;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-import org.openqa.selenium.Alert;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -54,7 +56,7 @@ public class WeblogicRestartController
 	{
 		driver.get(prop.getProperty("HMG05WebLogicBaseUrl"));
 		setEnvironment();
-		askUser();
+		//askUser();
 		WebElement txtUser = driver.findElement(By.id("j_username"));
 		WebElement txtPass = driver.findElement(By.id("j_password"));
 		txtUser.sendKeys(prop.getProperty("HMGWLUserName"));
@@ -142,14 +144,9 @@ public class WeblogicRestartController
 	{
 		WebElement tabControl = driver.findElement(By.cssSelector("a[title*='Control- Tab']"));
 		tabControl.click();
-		shutDownInstances();
-	}
-
-	public void shutDownInstances() 
-	{
 		askUser();
 	}
-	
+
     public String getUserInputFromPanel()
 	{
     	String input = null;
@@ -158,6 +155,7 @@ public class WeblogicRestartController
         JPanel innerPanel = new JPanel();
         JDialog dialog = pane.createDialog("How many instances to be shutdown?");
         JTextField text = new JTextField(10);
+       // JTextField text = new JTextField() { public void addNotify() { super.addNotify();requestFocus();}};
         innerPanel.add(text);
         dialog.setIconImage(image);
         dialog.add(innerPanel);
@@ -166,22 +164,108 @@ public class WeblogicRestartController
         dialog.setLocationRelativeTo(text);
         dialog.setAlwaysOnTop(true);
         dialog.setVisible(true);
+        text.setVisible(true);
+        text.setFocusable(true);
+        text.requestFocus();
         input = text.getText();
 		return input;
 	}
-	
+    String restartProces =null;
+    int numOfInstancesToRestart = 0;
 	public void askUser() 
 	{
 		System.out.println("How many instances to be shutdown?");
 		
-		int num = Integer.parseInt(getUserInputFromPanel());
-		System.out.println(num+" instances to restart");
-		System.out.println(num+1);
-		//WebElement bccInstance = driver.findElement(By.tagName("input")).getAttribute("title").contains("Select atg_bcc");
-		WebElement bccInstance = driver.findElement(By.cssSelector("input[title='Select atg_bcc']"));
-		highLightElement(bccInstance);
-	}
+		String inputFromUser = prop.getProperty("instancesToRestart");
+		if(inputFromUser.equals(""))
+			inputFromUser =	getUserInputFromPanel();
+		if(inputFromUser.equals(""))
+		{
+			System.out.println("Please enter your input");
+			askUser();
+		}
+		numOfInstancesToRestart = Integer.parseInt(inputFromUser);
+		System.out.println(numOfInstancesToRestart+" instances to restart");
 
+		
+		if(numOfInstancesToRestart==1)
+		{
+			System.out.println("First is Admin Server itself, you can't restart it. Please enter again");
+			askUser();
+		}
+		else
+		{
+			restartInstances();
+		}
+		//WebElement bccInstance = driver.findElement(By.tagName("input")).getAttribute("title").contains("Select atg_bcc");
+		
+	}
+	public void restartInstances()
+	{
+		restartProces = prop.getProperty("restartProces");
+		if(restartProces.equals("rolling"))
+		{
+			System.out.println("Restarting '"+numOfInstancesToRestart+"' in a group");
+			checkStateOfInstances();
+		}
+		else if(restartProces.equals("release"))
+		{
+			
+		}
+		else
+			System.out.println("Defined Restart process '"+restartProces+"' is not correct");
+		
+		/*WebElement bccInstance = driver.findElement(By.cssSelector("input[title='Select atg_bcc']"));
+		bccInstance.click();
+		highLightElement(bccInstance);*/
+	}
+	
+	public void checkStateOfInstances()
+	{
+		String name;
+		String instanceState;
+		WebElement selectInstance;
+		//HashMap<String,String> acctyp = new HashMap<String,String>();
+		//acctyp.put("'Open'","ACCTYP 01");
+		//gens.put("'GEN01'", acctyp);
+		
+		Map<String,String> instancesWithState = new HashMap<String, String>();
+		HashMap<WebElement, Map<String,String>> selectWithInstancesAndState = new HashMap<WebElement,Map<String,String>>();
+		
+		for(int i=1;i<=numOfInstancesToRestart;i++)
+		{
+			name = driver.findElement(By.id("name"+i)).getText();
+			instanceState = driver.findElement(By.id("state"+i)).getText();
+			selectInstance = driver.findElement(By.cssSelector("input[title='Select "+name+"']"));
+			//System.out.println("Selected instance is "+ selectInstance.getText()+"\n");
+			instancesWithState.put(name, instanceState);
+			
+			selectWithInstancesAndState.put(selectInstance, instancesWithState);
+			
+			//System.out.println("Current State of '"+name+"' is '"+instanceState+"'");
+			
+		}
+		Set keySet = selectWithInstancesAndState.keySet();
+		Iterator itr = keySet.iterator();
+		while (itr.hasNext()) {
+			WebElement type = (WebElement) itr.next();
+			type.click();
+			//System.out.println(type.getText());
+			Map innerInstancesWithState = selectWithInstancesAndState.get(type);
+			Set innerSet = innerInstancesWithState.keySet();
+			Iterator innerItr = innerSet.iterator();
+			while (innerItr.hasNext()) {
+				String object = (String) innerItr.next();
+				System.out.println(object+"\t"+innerInstancesWithState.get(object));
+			}
+			
+		}
+	}
+	
+	public void shutDownInstances()
+	{
+		
+	}
 	public static void main(String[] args) throws FileNotFoundException 
 	{
 		WeblogicRestartController wl = new WeblogicRestartController();

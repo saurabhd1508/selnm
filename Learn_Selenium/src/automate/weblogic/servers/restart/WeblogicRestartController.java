@@ -232,12 +232,12 @@ public class WeblogicRestartController
 		Map<String,String> instancesWithState = new HashMap<String, String>();
 		HashMap<WebElement, Map<String,String>> selectWithInstancesAndState = new HashMap<WebElement,Map<String,String>>();
 		
-		for(int i=1;i<=numOfInstancesToRestart;i++)
+		for(int i=2;i<=numOfInstancesToRestart;i++)
 		{
 			name = driver.findElement(By.id("name"+i)).getText();
 			instanceState = driver.findElement(By.id("state"+i)).getText();
 			selectInstance = driver.findElement(By.cssSelector("input[title='Select "+name+"']"));
-			//System.out.println("Selected instance is "+ selectInstance.getText()+"\n");
+			System.out.println("Name of instance to be selected is '"+name+"' and its state is '"+ instanceState+"'\n");
 			instancesWithState.put(name, instanceState);
 			
 			selectWithInstancesAndState.put(selectInstance, instancesWithState);
@@ -256,9 +256,8 @@ public class WeblogicRestartController
 			Iterator innerItr = innerSet.iterator();
 			while (innerItr.hasNext()) {
 				String object = (String) innerItr.next();
-				System.out.println(object+"\t"+innerInstancesWithState.get(object));
+				System.out.println(object+"\t - "+innerInstancesWithState.get(object));
 			}
-			
 		}
 	}
 	

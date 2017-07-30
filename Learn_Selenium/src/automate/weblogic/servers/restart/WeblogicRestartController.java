@@ -225,9 +225,6 @@ public class WeblogicRestartController
 		String name;
 		String instanceState;
 		WebElement selectInstance;
-		//HashMap<String,String> acctyp = new HashMap<String,String>();
-		//acctyp.put("'Open'","ACCTYP 01");
-		//gens.put("'GEN01'", acctyp);
 		
 		Map<String,String> instancesWithState = new HashMap<String, String>();
 		HashMap<WebElement, Map<String,String>> selectWithInstancesAndState = new HashMap<WebElement,Map<String,String>>();
@@ -248,15 +245,15 @@ public class WeblogicRestartController
 		Set keySet = selectWithInstancesAndState.keySet();
 		Iterator itr = keySet.iterator();
 		while (itr.hasNext()) {
-			WebElement type = (WebElement) itr.next();
-			type.click();
+			WebElement selectEle = (WebElement) itr.next();
+			selectEle.click();
 			//System.out.println(type.getText());
-			Map innerInstancesWithState = selectWithInstancesAndState.get(type);
+			Map innerInstancesWithState = selectWithInstancesAndState.get(selectEle);
 			Set innerSet = innerInstancesWithState.keySet();
 			Iterator innerItr = innerSet.iterator();
 			while (innerItr.hasNext()) {
-				String object = (String) innerItr.next();
-				System.out.println(object+"\t - "+innerInstancesWithState.get(object));
+				String nameNstate = (String) innerItr.next();
+				System.out.println(selectEle.toString()+"\t" + nameNstate+"\t - "+innerInstancesWithState.get(nameNstate));
 			}
 		}
 	}

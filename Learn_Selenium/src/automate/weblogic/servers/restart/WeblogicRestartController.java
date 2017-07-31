@@ -54,7 +54,7 @@ public class WeblogicRestartController
 	
 	public void loginToWebLogic()
 	{
-		driver.get(prop.getProperty("HMG05WebLogicBaseUrl"));
+		driver.get(prop.getProperty("HMG03WebLogicBaseUrl"));
 		setEnvironment();
 		//askUser();
 		WebElement txtUser = driver.findElement(By.id("j_username"));
@@ -89,6 +89,10 @@ public class WeblogicRestartController
 	
 	public void setEnvironment()
 	{
+		if(driver.getCurrentUrl().contains("hmg03"))
+		{
+			environment = "HMG03"; 
+		}
 		if(driver.getCurrentUrl().contains("hmg05"))
 		{
 			environment = "HMG05"; 
@@ -206,7 +210,7 @@ public class WeblogicRestartController
 		if(restartProces.equals("rolling"))
 		{
 			System.out.println("Restarting '"+numOfInstancesToRestart+"' in a group");
-			checkStateOfInstances();
+			selectInstances();
 		}
 		else if(restartProces.equals("release"))
 		{
@@ -219,43 +223,76 @@ public class WeblogicRestartController
 		bccInstance.click();
 		highLightElement(bccInstance);*/
 	}
-	
-	public void checkStateOfInstances()
+	int totalInstances =0;
+	public void selectInstances()
 	{
-		String name;
+		String instanceName;
 		String instanceState;
-		WebElement selectInstance;
+		WebElement eleSelectInstance;
+		int eleId=2;
+		HashMap<String,String> instancesWithState;
+		HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
 		
-		Map<String,String> instancesWithState = new HashMap<String, String>();
-		HashMap<WebElement, Map<String,String>> selectWithInstancesAndState = new HashMap<WebElement,Map<String,String>>();
+		if(environment.equals("HMG03"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG03Instances"));
+		else if(environment.equals("HMG05"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG05Instances"));
 		
-		for(int i=2;i<=numOfInstancesToRestart;i++)
+		for(int i=0;i<(totalInstances/numOfInstancesToRestart);i++)
 		{
-			name = driver.findElement(By.id("name"+i)).getText();
-			instanceState = driver.findElement(By.id("state"+i)).getText();
-			selectInstance = driver.findElement(By.cssSelector("input[title='Select "+name+"']"));
-			System.out.println("Name of instance to be selected is '"+name+"' and its state is '"+ instanceState+"'\n");
-			instancesWithState.put(name, instanceState);
-			
-			selectWithInstancesAndState.put(selectInstance, instancesWithState);
-			
-			//System.out.println("Current State of '"+name+"' is '"+instanceState+"'");
-			
-		}
-		Set keySet = selectWithInstancesAndState.keySet();
-		Iterator itr = keySet.iterator();
-		while (itr.hasNext()) {
-			WebElement selectEle = (WebElement) itr.next();
-			selectEle.click();
-			//System.out.println(type.getText());
-			Map innerInstancesWithState = selectWithInstancesAndState.get(selectEle);
-			Set innerSet = innerInstancesWithState.keySet();
-			Iterator innerItr = innerSet.iterator();
-			while (innerItr.hasNext()) {
-				String nameNstate = (String) innerItr.next();
-				System.out.println(selectEle.toString()+"\t" + nameNstate+"\t - "+innerInstancesWithState.get(nameNstate));
+			for(int j=0;j<numOfInstancesToRestart;j++)
+			{
+				instancesWithState = new HashMap<String, String>();
+				instanceName = driver.findElement(By.id("name"+eleId)).getText();
+				instanceState = driver.findElement(By.id("state"+eleId)).getText();
+				
+				eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select "+instanceName+"']"));
+				//System.out.println("Name of instance to be selected is '"+instanceName+"' and its state is '"+ instanceState+"'\n");
+				instancesWithState.put(instanceName, instanceState);
+				//System.out.println("Putting data in instancesWithState '"+instancesWithState.keySet().iterator().next()+"'\n"); 
+				selectWithInstancesAndState.put(eleSelectInstance, instancesWithState);
+				//System.out.println("Data in selectWithInstancesAndState "+selectWithInstancesAndState+"\n"); 
+				//System.out.println("Current State of '"+name+"' is '"+instanceState+"'");
+				//totalInstances = totalInstances - numOfInstancesToRestart;
+				eleId++;
+			}	
+		
+			Set keySet = selectWithInstancesAndState.keySet();
+			Iterator itr = keySet.iterator();
+			while (itr.hasNext()) 
+			{
+				WebElement selectEle = (WebElement) itr.next();
+				selectEle.click();
+				
+				//System.out.println(type.getText());
+				Map innerInstancesWithState = selectWithInstancesAndState.get(selectEle);
+				Set innerSet = innerInstancesWithState.keySet();
+				Iterator innerItr = innerSet.iterator();
+				while (innerItr.hasNext()) 
+				{
+					String nameNstate = (String) innerItr.next();
+					//System.out.println(selectEle.toString()+"\t" + nameNstate+"\t - "+innerInstancesWithState.get(nameNstate));
+				}
+			}
+			suspendInstances();
+			try {
+				System.out.println("Sleeping for 10 Sec");
+				Thread.sleep(10000);
+				
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
+	}
+	
+	public void suspendInstances()
+	{
+		WebElement btnSuspend = driver.findElement(By.cssSelector("button[name='Suspend']"));
+		highLightElement(btnSuspend);
+		btnSuspend.click();
+		WebElement lnkForceSuspend = driver.findElement(By.linkText("Force Suspend Now"));
+		highLightElement(lnkForceSuspend);
 	}
 	
 	public void shutDownInstances()

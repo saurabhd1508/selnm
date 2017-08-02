@@ -21,6 +21,8 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
+import junit.framework.Assert;
+
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
@@ -54,7 +56,7 @@ public class WeblogicRestartController
 	
 	public void loginToWebLogic()
 	{
-		driver.get(prop.getProperty("HMG03WebLogicBaseUrl"));
+		driver.get(prop.getProperty("WebLogicBaseUrl"));
 		setEnvironment();
 		//askUser();
 		WebElement txtUser = driver.findElement(By.id("j_username"));
@@ -229,14 +231,19 @@ public class WeblogicRestartController
 		String instanceName;
 		String instanceState;
 		WebElement eleSelectInstance;
-		int eleId=2;
-		HashMap<String,String> instancesWithState;
-		HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
-		
+		int eleId=3;
 		if(environment.equals("HMG03"))
 			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG03Instances"));
 		else if(environment.equals("HMG05"))
 			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG05Instances"));
+		
+		instanceName = driver.findElement(By.id("name"+eleId)).getText();
+		instanceState = driver.findElement(By.id("state"+eleId)).getText();
+		eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select "+instanceName+"']"));
+		eleSelectInstance.click();
+		suspendInstances();
+		/*HashMap<String,String> instancesWithState;
+		HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
 		
 		for(int i=0;i<(totalInstances/numOfInstancesToRestart);i++)
 		{
@@ -280,12 +287,16 @@ public class WeblogicRestartController
 				Thread.sleep(10000);
 				
 			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-		}
+		}*/
 	}
 	
+	public void startAutoRefresh()
+	{
+		WebElement imgRefresh = driver.findElement(By.cssSelector("img[id='refreshIcondefaultRegion']"));
+		imgRefresh.click();
+	}
 	public void suspendInstances()
 	{
 		WebElement btnSuspend = driver.findElement(By.cssSelector("button[name='Suspend']"));
@@ -293,6 +304,10 @@ public class WeblogicRestartController
 		btnSuspend.click();
 		WebElement lnkForceSuspend = driver.findElement(By.linkText("Force Suspend Now"));
 		highLightElement(lnkForceSuspend);
+		lnkForceSuspend.click();
+		WebElement btnYes = driver.findElement(By.cssSelector("button[name='Yes']"));
+		btnYes.click();
+		startAutoRefresh();
 	}
 	
 	public void shutDownInstances()

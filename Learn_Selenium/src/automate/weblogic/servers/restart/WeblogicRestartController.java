@@ -205,24 +205,23 @@ public class WeblogicRestartController {
 		System.out.println(remainingInstances);
 		// for(int i=0;i<(totalInstances/numOfInstancesToRestart);i++)
 		
-		 	for(int j=0;j<numOfInstancesToRestart;j++)
-		 	{
-		 		instancesWithState = new HashMap<String, String>();
-		 		instanceName = driver.findElement(By.id("name"+eleId)).getText();
-		 		instanceState = driver.findElement(By.id("state"+eleId)).getText();
-		 		instanceNameAndNumber.put(instanceName, eleId);
-		 		eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " +instanceName+"']"));
-		 		instancesWithState.put(instanceName, instanceState);
-		 		selectWithInstancesAndState.put(eleSelectInstance, instancesWithState);
-		 		eleId++;
-		 	}
-		 	Set keySet = selectWithInstancesAndState.keySet();
-		 	Iterator itr = keySet.iterator();
-		 	while (itr.hasNext())
-		 	{
-		 		WebElement selectEle = (WebElement) itr.next();
-		 		selectEle.click();
-		 	}
+		for (int j = 0; j < numOfInstancesToRestart; j++) 
+		{
+			instancesWithState = new HashMap<String, String>();
+			instanceName = driver.findElement(By.id("name" + eleId)).getText();
+			instanceState = driver.findElement(By.id("state" + eleId)).getText();
+			instanceNameAndNumber.put(instanceName, eleId);
+			eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
+			instancesWithState.put(instanceName, instanceState);
+			selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
+			eleId++;
+		}
+		Set keySet = selectWithInstancesAndState.keySet();
+		Iterator itr = keySet.iterator();
+		while (itr.hasNext()) {
+			WebElement selectEle = (WebElement) itr.next();
+			selectEle.click();
+		}
 	}
 	
 	public void suspendInstances(HashMap<String, Integer> instanceNameAndNumber) 

@@ -6,14 +6,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
@@ -114,8 +110,15 @@ public class WeblogicRestartController {
 	int numOfInstancesToRestart = 0;
 	public void askUser()
 	{
-		System.out.println("How many instances to be shutdown?");
+		
+		
+		// Get Input from config file.
+		
 		String inputFromUser = prop.getProperty("instancesToRestart");
+		
+		//Get input from user at runtime.
+		
+		System.out.println("How many instances to be shutdown?");
 		if (inputFromUser.equals(""))
 			inputFromUser = getUserInputFromPanel();
 		if (inputFromUser.equals(""))
@@ -128,6 +131,8 @@ public class WeblogicRestartController {
 		
 		startProcess();
 	}
+
+	
 
 	public String getUserInputFromPanel()
 	{
@@ -152,9 +157,21 @@ public class WeblogicRestartController {
 		return input;
 	}
 	
-	public void startProcess()
+	int loop = 0, totalInstances = 0, remainingInstances = 0, elementId = 1;
+	HashMap<String,Integer> instanceNameAndNumber = null;
+	
+	public void startProcess() 
 	{
 		restartProcess = prop.getProperty("restartProcess");
+		
+		String instanceName;
+		String instanceState;
+		WebElement eleSelectInstance;
+		
+		HashMap<String,String> instancesWithState = null;
+		HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
+		
+		instanceNameAndNumber = new HashMap<String, Integer>();
 		
 		if (environment.equals("HMG03"))
 			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG03Instances"));
@@ -163,19 +180,46 @@ public class WeblogicRestartController {
 		else if (environment.equals("LOCAL"))
 			totalInstances = Integer.parseInt(prop.getProperty("TotalLocalInstances"));
 		
+		loop = totalInstances / numOfInstancesToRestart;
+		System.out.println("Loop is of "+loop);
+		
 		if (restartProcess.equals("rolling"))
 		{
-			 for(int i=0;eleId<=totalInstances;i++)
+			for(int i=0;elementId<=totalInstances;i++)
 			 {
-				 System.out.println("Restarting '" + numOfInstancesToRestart+ "' in a group");
-				 selectInstances();
+				for (int j = 1; j <= numOfInstancesToRestart; j++) 
+				{
+					instancesWithState = new HashMap<String, String>();
+					instanceName = driver.findElement(By.id("name" + elementId)).getText();
+					instanceState = driver.findElement(By.id("state" + elementId)).getText();
+					if(instanceName.equals("AdminServer(admin)"))
+					{
+						elementId++;
+						j--;
+						continue;
+					}
+					instanceNameAndNumber.put(instanceName, elementId);
+					if(numOfInstancesToRestart != instanceNameAndNumber.size())
+						elementId++;
+					eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
+					instancesWithState.put(instanceName, instanceState);
+					selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
+				}
+				selectInstances(instanceNameAndNumber);
 				 if(isSelectedInstancesAreRunning(instanceNameAndNumber))
 				 {
 					suspendInstances(instanceNameAndNumber);
-					eleId=2;
-					selectInstances();
+					selectInstances(instanceNameAndNumber);
 					shutDownInstances(instanceNameAndNumber);
+					selectInstances(instanceNameAndNumber);
+					startInstances(instanceNameAndNumber);
 				 }
+				 elementId++;
+				 instanceNameAndNumber.clear();
+				 if(elementId>totalInstances)
+					 System.out.println("Rolling restart Process is completed...");
+				 System.out.println("Waiting to normalize instances");
+				 waitForTenSeconds();
 			 }
 		}
 		else if (restartProcess.equals("release"))
@@ -184,45 +228,103 @@ public class WeblogicRestartController {
 		else
 			System.out.println("Defined process '" + restartProcess+ "' is not correct");
 	}
-
-	int totalInstances = 0;
-	int remainingInstances = 0;
-	HashMap<String,Integer> instanceNameAndNumber=null;
-	int eleId = 2;
-	public void selectInstances()
+	
+	public void selectInstances(HashMap<String, Integer> instanceNameAndNumber2)
 	{
-		String instanceName;
-		String instanceState;
-		WebElement eleSelectInstance;
-
-		waitForTwoSeconds();
-		
-		HashMap<String,String> instancesWithState = null;
-		HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
-		
-		instanceNameAndNumber = new HashMap<String, Integer>();
-		remainingInstances = totalInstances % numOfInstancesToRestart;
-		System.out.println(remainingInstances);
-		// for(int i=0;i<(totalInstances/numOfInstancesToRestart);i++)
-		
-		for (int j = 0; j < numOfInstancesToRestart; j++) 
-		{
-			instancesWithState = new HashMap<String, String>();
-			instanceName = driver.findElement(By.id("name" + eleId)).getText();
-			instanceState = driver.findElement(By.id("state" + eleId)).getText();
-			instanceNameAndNumber.put(instanceName, eleId);
-			eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-			instancesWithState.put(instanceName, instanceState);
-			selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
-			eleId++;
-		}
-		Set keySet = selectWithInstancesAndState.keySet();
+		Set keySet = instanceNameAndNumber2.keySet();
 		Iterator itr = keySet.iterator();
-		while (itr.hasNext()) {
-			WebElement selectEle = (WebElement) itr.next();
-			selectEle.click();
+		WebElement selectEle=null;
+		String instanceName = null;
+		while (itr.hasNext()) 
+		{
+			try
+			{
+				instanceName = itr.next().toString();
+				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
+				selectEle.click();
+			}
+			catch(StaleElementReferenceException e)
+			{
+				instanceName = itr.next().toString();
+				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
+				selectEle.click();
+				/*System.out.println("Caught Stale Element Exception... continuing with execution");
+				selectEle = (WebElement) itr.next();
+				selectEle.click();*/
+			}
 		}
 	}
+	
+	public void refreshPage()
+	{
+		waitForTenSeconds();
+		driver.navigate().refresh();
+	}
+	public void startInstances(HashMap<String, Integer> instanceNameAndNumber2) 
+	{
+		System.out.println("Starting Instances");
+		WebElement btnStart = driver.findElement(By.cssSelector("button[name='Start']"));
+		highLightElement(btnStart);
+		btnStart.click();
+		if(environment.equals("HMG05"))
+			selectServerLifeCycleAssistant();
+		//startAutoRefresh();
+		try {
+			Set keySet = instanceNameAndNumber.keySet();
+			Iterator itr = keySet.iterator();
+			String instanceName = null;
+			String instanceState = null;
+			Integer instanceNumber = null;
+			while (itr.hasNext()) 
+			{
+				instanceName = (String) itr.next();
+				instanceNumber = instanceNameAndNumber.get(instanceName);
+				
+				while (true) 
+				{
+					instanceNumber = instanceNameAndNumber.get(instanceName);
+					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
+					//System.out.println("Instance is '" + instanceName + "' and its state is '" + instanceState + "'");
+					refreshPage();
+					if (instanceState.equals("RUNNING")) 
+					{
+						System.out.println("'"+instanceName + "' is started and running now");
+						break;
+					}
+				}
+			}
+			//stopAutoRefresh();
+		}
+		catch(StaleElementReferenceException e)
+		{
+			System.out.println("Caught Stale Element Exception... continuing with execution");
+			Set keySet = instanceNameAndNumber.keySet();
+			Iterator itr = keySet.iterator();
+			String instanceName = null;
+			String instanceState = null;
+			Integer instanceNumber = null;
+			while (itr.hasNext()) 
+			{
+				instanceName = (String) itr.next();
+				instanceNumber = instanceNameAndNumber.get(instanceName);
+				
+				while (true) 
+				{
+					instanceNumber = instanceNameAndNumber.get(instanceName);
+					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
+					refreshPage();
+					if (instanceState.equals("RUNNING")) 
+					{
+						System.out.println("'"+instanceName + "' is started and running now");
+						break;
+					}
+				}
+			}
+			//stopAutoRefresh();
+		}
+	}
+
+	
 	
 	public void suspendInstances(HashMap<String, Integer> instanceNameAndNumber) 
 	{
@@ -254,7 +356,7 @@ public class WeblogicRestartController {
 					System.out.println("Instance is '"+instanceName+"' and its state is '"+instanceState+"'");
 					if (instanceState.equals("ADMIN"))
 					{
-						System.out.println(instanceName + " got suspended");
+						System.out.println("'"+instanceName + "' got suspended");
 						break;
 					}
 				}
@@ -278,7 +380,7 @@ public class WeblogicRestartController {
 					System.out.println("Instance is '"+instanceName+"' and its state is '"+instanceState+"'");
 					if (instanceState.equals("ADMIN"))
 					{
-						System.out.println(instanceName + " got suspended");
+						System.out.println("'"+instanceName + "' got suspended");
 						break;
 					}
 				}
@@ -321,44 +423,6 @@ public class WeblogicRestartController {
 		}
 	}
 	
-	public void suspendInstances(String instanceName, String instanceState,int eleId)
-	{
-		System.out.println("Suspending Instances");
-		WebElement btnSuspend = driver.findElement(By.cssSelector("button[name='Suspend']"));
-		highLightElement(btnSuspend);
-		btnSuspend.click();
-		WebElement lnkForceSuspend = driver.findElement(By.linkText("Force Suspend Now"));
-		highLightElement(lnkForceSuspend);
-		lnkForceSuspend.click();
-		if(environment.equals("HMG05"))
-		{
-			selectServerLifeCycleAssistant();
-		}
-		startAutoRefresh();
-		try {
-			while (true) {
-				instanceName = driver.findElement(By.id("name" + eleId)).getText();
-				instanceState = driver.findElement(By.id("state" + eleId)).getText();
-				if (instanceState.equals("ADMIN")) {
-					System.out.println(instanceName + " got suspended");
-					break;
-				}
-			}
-		}
-		catch(StaleElementReferenceException e)
-		{
-			while (true)
-			{
-				instanceName = driver.findElement(By.id("name" + eleId)).getText();
-				instanceState = driver.findElement(By.id("state" + eleId)).getText();
-				if (instanceState.equals("ADMIN"))
-				{
-					System.out.println(instanceName+" got suspended");
-					break;
-				}
-			}
-		}
-	}
 	public void selectServerLifeCycleAssistant()
 	{
 		WebElement btnYes =driver.findElement(By.cssSelector("button[name='Yes']"));
@@ -371,108 +435,80 @@ public class WeblogicRestartController {
 		WebElement btnShutdown = driver.findElement(By.cssSelector("button[name='Shutdown']"));
 		highLightElement(btnShutdown);
 		btnShutdown.click();
+		waitForTwoSeconds();
 		WebElement lnkForceShutdown = driver.findElement(By.linkText("Force Shutdown Now"));
 		highLightElement(lnkForceShutdown);
 		lnkForceShutdown.click();
 		if(environment.equals("HMG05"))
 			selectServerLifeCycleAssistant();
-		startAutoRefresh();
+		//startAutoRefresh();
 		try {
 			Set keySet = instanceNameAndNumber.keySet();
 			Iterator itr = keySet.iterator();
+			String instanceName = null;
+			String instanceState = null;
+			Integer instanceNumber = null;
 			while (itr.hasNext()) 
 			{
-				while(true)
+				instanceName = (String) itr.next();
+				instanceNumber = instanceNameAndNumber.get(instanceName);
+				
+				while (true) 
 				{
-					String instanceName = null;
-					String instanceState = null;
-					Integer instanceNumber = null;
-					instanceName = (String) itr.next();
-					instanceNumber = instanceNameAndNumber.get(instanceName);
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
-					System.out.println("Instance is '"+instanceName+"' and its state is '"+instanceState+"'");
-					if (instanceState.equals("SHUTDOWN"))
+					//System.out.println("Instance is '" + instanceName + "' and its state is '" + instanceState + "'");
+					refreshPage();
+					if (instanceState.equals("SHUTDOWN")) 
 					{
-						System.out.println(instanceName + " got shutdown");
+						System.out.println("'"+instanceName + "' got shutdown");
 						break;
 					}
 				}
 			}
-			stopAutoRefresh();
+			//stopAutoRefresh();
 		}
 		catch(StaleElementReferenceException e)
 		{
 			Set keySet = instanceNameAndNumber.keySet();
 			Iterator itr = keySet.iterator();
-			while (itr.hasNext())
+			String instanceName = null;
+			String instanceState = null;
+			Integer instanceNumber = null;
+			while (itr.hasNext()) 
 			{
-				while(true)
+				instanceName = (String) itr.next();
+				instanceNumber = instanceNameAndNumber.get(instanceName);
+				
+				while (true) 
 				{
-					String instanceName = null;
-					String instanceState = null;
-					Integer instanceNumber = null;
-					instanceName = (String) itr.next();
 					instanceNumber = instanceNameAndNumber.get(instanceName);
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
-					System.out.println("Instance is '"+instanceName+"' and its state is '"+instanceState+"'");
-					if (instanceState.equals("SHUTDOWN"))
+					//System.out.println("Instance is '" + instanceName + "' and its state is '" + instanceState + "'");
+					refreshPage();
+					if (instanceState.equals("SHUTDOWN")) 
 					{
-						System.out.println(instanceName + " got shutdown");
+						System.out.println("'"+instanceName + "' got shutdown");
 						break;
 					}
 				}
 			}
-			stopAutoRefresh();
+			//stopAutoRefresh();
 		}
 	}
-	
-	/*public void shutDownInstances(String instanceName, String instanceState,int eleId)
-	{
-		WebElement eleSelectInstance;
-		eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-		eleSelectInstance.click();
-		WebElement btnShutdown = driver.findElement(By.cssSelector("button[name='Shutdown']"));
-		highLightElement(btnShutdown);
-		btnShutdown.click();
-		WebElement lnkForceShutdown = driver.findElement(By.linkText("Force Shutdown Now"));
-		highLightElement(lnkForceShutdown);
-		lnkForceShutdown.click();
-		if(environment.equals("HMG05"))
-			selectServerLifeCycleAssistant();
-		startAutoRefresh();
-		try{
-			while (true)
-			{
-				instanceName = driver.findElement(By.id("name" + eleId)).getText();
-				instanceState = driver.findElement(By.id("state" + eleId)).getText();
-				if (instanceState.equals("SHUTDOWN"))
-				{
-					System.out.println("Instance '"+instanceName+"' is shutdown");
-					break;
-				}
-			}
-		}
-		catch(StaleElementReferenceException e)
-		{
-			System.out.println("Stale Exception caught");
-			while (true)
-			{
-				instanceName = driver.findElement(By.id("name" + eleId)).getText();
-				instanceState = driver.findElement(By.id("state" + eleId)).getText();
-				if (instanceState.equals("SHUTDOWN"))
-				{
-					System.out.println("Instance '"+instanceName+"' is shutdown");
-					stopAutoRefresh();
-					break;
-				}
-			}
-		}
-	}*/
 	
 	public void waitForTwoSeconds()
 	{
 		try {
 			Thread.sleep(2000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public void waitForTenSeconds()
+	{
+		try {
+			Thread.sleep(10000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
@@ -510,6 +546,7 @@ public class WeblogicRestartController {
 		}
 		return false;
 	}
+	
 	public void startAutoRefresh()
 	{
 		if(isAutoRefreshRunning())

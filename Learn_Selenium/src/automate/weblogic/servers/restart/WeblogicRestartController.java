@@ -81,15 +81,15 @@ public class WeblogicRestartController
 		if (driver.getCurrentUrl().contains("hmg05"))
 			environment = "HMG05";
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom01ConsoleBR")))
-			environment = "BR_DOM01";
+			environment = "DOM01";
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom02ConsoleBR")))
-			environment = "BR_DOM02";
+			environment = "DOM02";
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom03ConsoleBR")))
-			environment = "BR_DOM03";
+			environment = "DOM03";
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom04ConsoleBR")))
-			environment = "BR_DOM04";
+			environment = "DOM04";
 		else if (driver.getCurrentUrl().contains(prop.getProperty("DomServicesBR")))
-			environment = "BR_Services";
+			environment = "Services";
 	}
 
 	public void navigateToServers()
@@ -134,7 +134,7 @@ public class WeblogicRestartController
 		Image image = new ImageIcon(prop.getProperty("iconImage")).getImage();
 		JOptionPane pane = new JOptionPane("");
 		JPanel innerPanel = new JPanel();
-		JDialog dialog = pane.createDialog("How many instances to be shutdown?");
+		JDialog dialog = pane.createDialog("Are we ready to start deploy process?");
 		JTextField text = new JTextField(10);
 		innerPanel.add(text);
 		dialog.setIconImage(image);
@@ -157,7 +157,7 @@ public class WeblogicRestartController
 	public void startProcess() 
 	{
 		restartProcess = prop.getProperty("restartProcess");
-		String instanceName, instanceState;
+		String instanceName, instanceState,inputFromUser;
 		WebElement eleSelectInstance;
 		
 		HashMap<String,String> instancesWithState = null;
@@ -171,6 +171,16 @@ public class WeblogicRestartController
 			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG05Instances"));
 		else if (environment.equals("LOCAL"))
 			totalInstances = Integer.parseInt(prop.getProperty("TotalLocalInstances"));
+		else if (environment.equals("DOM01"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom01Instances"));
+		else if (environment.equals("DOM02"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom02Instances"));
+		else if (environment.equals("DOM03"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom03Instances"));
+		else if (environment.equals("DOM04"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom04Instances"));
+		else if (environment.equals("Services"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalServiceDomInstances"));
 		
 		loop = totalInstances / numOfInstancesToRestart;
 		System.out.println("Loop is of "+loop);
@@ -198,20 +208,20 @@ public class WeblogicRestartController
 				//	selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
 				}
 				selectInstances(instanceNameAndNumber);
-				 if(isSelectedInstancesAreRunning(instanceNameAndNumber))
-				 {
+				if(isSelectedInstancesAreRunning(instanceNameAndNumber))
+				{
 					suspendInstances(instanceNameAndNumber);
 					selectInstances(instanceNameAndNumber);
 					shutDownInstances(instanceNameAndNumber);
 					selectInstances(instanceNameAndNumber);
 					startInstances(instanceNameAndNumber);
-				 }
-				 elementId++;
-				 instanceNameAndNumber.clear();
-				 if(elementId>totalInstances)
-					 System.out.println("Rolling restart Process is completed...");
-				 System.out.println("Waiting to normalize instances");
-				 waitForTenSeconds();
+				}
+				elementId++;
+				instanceNameAndNumber.clear();
+				if(elementId>totalInstances)
+					System.out.println("Rolling restart Process is completed...");
+				System.out.println("Waiting to normalize instances");
+				waitForTenSeconds();
 			 }
 		}
 		else if (restartProcess.equals("release"))
@@ -243,19 +253,44 @@ public class WeblogicRestartController
 					selectInstances(instanceNameAndNumber);
 					shutDownInstances(instanceNameAndNumber);
 					
+					
 				 }
 				 elementId++;
 				 instanceNameAndNumber.clear();
 				 System.out.println("Waiting to normalize instances");
 				 waitForTenSeconds();
-				 if(elementId>totalInstances)
-					 System.out.println("Restart Process for RELEASE is completed...");
+				/* if(elementId>totalInstances)
+					 System.out.println("Restart Process for RELEASE is completed...");*/
 			 }
+			while(true)
+			{
+				inputFromUser = getUserInputFromPanel();
+				if(inputFromUser.equalsIgnoreCase("wait"))
+				{
+					waitForTenSeconds();
+				}
+				else if(inputFromUser.equalsIgnoreCase("ok"))
+				{
+					startDeployProcess();
+					break;
+				}
+				else if(inputFromUser.equalsIgnoreCase(""))
+					System.out.println("Please enter your input");
+				else if(inputFromUser.isEmpty())
+					System.out.println("Please enter your input");
+				else
+					System.out.println("Please enter valid input");
+			}
 		}
 		else
 			System.out.println("Defined process '" + restartProcess+ "' is not correct");
 	}
 	
+	private void startDeployProcess() 
+	{
+		System.out.println("Starting deploy process");
+	}
+
 	public void selectInstances(HashMap<String, Integer> instanceNameAndNumber2)
 	{
 		Set keySet = instanceNameAndNumber2.keySet();
@@ -293,7 +328,7 @@ public class WeblogicRestartController
 		WebElement btnStart = driver.findElement(By.cssSelector("button[name='Start']"));
 		highLightElement(btnStart);
 		btnStart.click();
-		if(environment.equals("HMG05"))
+		if(environment.equals("HMG05")||environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04") ||environment.equals("Services"))
 			selectServerLifeCycleAssistant();
 		//startAutoRefresh();
 		try {

@@ -24,7 +24,8 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
-public class WeblogicRestartController {
+public class WeblogicRestartController 
+{
 	Properties prop = new Properties();
 	private WebDriver driver;
 	String environment;
@@ -110,14 +111,10 @@ public class WeblogicRestartController {
 	int numOfInstancesToRestart = 0;
 	public void askUser()
 	{
-		
-		
 		// Get Input from config file.
-		
 		String inputFromUser = prop.getProperty("instancesToRestart");
 		
-		//Get input from user at runtime.
-		
+		// Get input from user at runtime.
 		System.out.println("How many instances to be shutdown?");
 		if (inputFromUser.equals(""))
 			inputFromUser = getUserInputFromPanel();
@@ -128,11 +125,8 @@ public class WeblogicRestartController {
 		}
 		numOfInstancesToRestart = Integer.parseInt(inputFromUser);
 		System.out.println(numOfInstancesToRestart + " instances to restart");
-		
 		startProcess();
 	}
-
-	
 
 	public String getUserInputFromPanel()
 	{
@@ -163,13 +157,11 @@ public class WeblogicRestartController {
 	public void startProcess() 
 	{
 		restartProcess = prop.getProperty("restartProcess");
-		
-		String instanceName;
-		String instanceState;
+		String instanceName, instanceState;
 		WebElement eleSelectInstance;
 		
 		HashMap<String,String> instancesWithState = null;
-		HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
+		//HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
 		
 		instanceNameAndNumber = new HashMap<String, Integer>();
 		
@@ -203,7 +195,7 @@ public class WeblogicRestartController {
 						elementId++;
 					eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
 					instancesWithState.put(instanceName, instanceState);
-					selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
+				//	selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
 				}
 				selectInstances(instanceNameAndNumber);
 				 if(isSelectedInstancesAreRunning(instanceNameAndNumber))
@@ -224,6 +216,41 @@ public class WeblogicRestartController {
 		}
 		else if (restartProcess.equals("release"))
 		{
+			for(int i=0;elementId<=totalInstances;i++)
+			 {
+				for (int j = 1; j <= numOfInstancesToRestart; j++) 
+				{
+					instancesWithState = new HashMap<String, String>();
+					instanceName = driver.findElement(By.id("name" + elementId)).getText();
+					instanceState = driver.findElement(By.id("state" + elementId)).getText();
+					if(instanceName.equals("AdminServer(admin)"))
+					{
+						elementId++;
+						j--;
+						continue;
+					}
+					instanceNameAndNumber.put(instanceName, elementId);
+					if(numOfInstancesToRestart != instanceNameAndNumber.size())
+						elementId++;
+					eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
+					instancesWithState.put(instanceName, instanceState);
+					//selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
+				}
+				selectInstances(instanceNameAndNumber);
+				 if(isSelectedInstancesAreRunning(instanceNameAndNumber))
+				 {
+					suspendInstances(instanceNameAndNumber);
+					selectInstances(instanceNameAndNumber);
+					shutDownInstances(instanceNameAndNumber);
+					
+				 }
+				 elementId++;
+				 instanceNameAndNumber.clear();
+				 System.out.println("Waiting to normalize instances");
+				 waitForTenSeconds();
+				 if(elementId>totalInstances)
+					 System.out.println("Restart Process for RELEASE is completed...");
+			 }
 		}
 		else
 			System.out.println("Defined process '" + restartProcess+ "' is not correct");
@@ -279,7 +306,6 @@ public class WeblogicRestartController {
 			{
 				instanceName = (String) itr.next();
 				instanceNumber = instanceNameAndNumber.get(instanceName);
-				
 				while (true) 
 				{
 					instanceNumber = instanceNameAndNumber.get(instanceName);
@@ -307,7 +333,6 @@ public class WeblogicRestartController {
 			{
 				instanceName = (String) itr.next();
 				instanceNumber = instanceNameAndNumber.get(instanceName);
-				
 				while (true) 
 				{
 					instanceNumber = instanceNameAndNumber.get(instanceName);

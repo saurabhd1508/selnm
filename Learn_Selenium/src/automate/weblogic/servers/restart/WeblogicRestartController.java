@@ -6,10 +6,12 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Properties;
 import java.util.Set;
+import java.util.List;
 
 import javax.swing.ImageIcon;
 import javax.swing.JDialog;
@@ -21,15 +23,26 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.StaleElementReferenceException;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.Sleeper;
+
+import com.gargoylesoftware.htmlunit.javascript.background.JavaScriptExecutor;
 
 public class WeblogicRestartController 
 {
-	Properties prop = new Properties();
+	private Properties prop = new Properties();
 	private WebDriver driver;
-	String environment;
-
+	private String environment;
+	private String restartProcess = null;
+	private int totalShutdownInstances=0;
+	private int numOfInstancesToRestart = 0;
+	private int loop = 0;
+	private int totalInstances = 0;
+	private int remainingInstances = 0;
+	private int elementId = 1;
+	
 	public void setProperties() throws FileNotFoundException {
 		InputStream inputPropFile = new FileInputStream("./resources/properties/weblogicConfigs.properties");
 		try {
@@ -37,48 +50,69 @@ public class WeblogicRestartController
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		setWebdriver();
 	}
 
 	public void setWebdriver()
 	{
 		System.setProperty("webdriver.chrome.driver",prop.getProperty("webDriverPath"));
 		driver = new ChromeDriver();
-		loginToWebLogic();
 	}
 
 	public void loginToWebLogic()
 	{
+		WebElement txtUser= null, txtPass=null;
+		boolean isTxtUseravailable=false;
 		driver.get(prop.getProperty("WebLogicBaseUrl"));
 		setEnvironment();
 		// askUser();
-		WebElement txtUser = driver.findElement(By.id("j_username"));
-		WebElement txtPass = driver.findElement(By.id("j_password"));
-		txtUser.sendKeys(prop.getProperty("HMGWLUserName"));
-		txtPass.sendKeys(prop.getProperty("HMGWLPassowrd"));
-		WebElement btnLogin = driver.findElement(By.className("formButton"));
-		btnLogin.click();
-		waitForTwoSeconds();
-		String pageSource = driver.getPageSource();
-		if (pageSource.contains("welcome"))
+		isTxtUseravailable = driver.findElements(By.id("j_username")).size()>=1;
+		if(isTxtUseravailable)
 		{
-			System.out.println("Successfully logged in to Weblogic Admin Console");
-			navigateToServers();
+			txtUser = driver.findElement(By.id("j_username"));
+			txtPass = driver.findElement(By.id("j_password"));
+			if(environment.equals("LOCAL"))
+			{
+				txtUser.sendKeys(prop.getProperty("LocalWLUserName"));
+				txtPass.sendKeys(prop.getProperty("LocalWLPassword"));
+			}
+			if(environment.equals("HMG03")||environment.equals("HMG05"))
+			{
+				txtUser.sendKeys(prop.getProperty("HMGWLUserName"));
+				txtPass.sendKeys(prop.getProperty("HMGWLPassowrd"));
+			}
+			else if(environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04")||environment.equals("Services"))
+			{
+				txtUser.sendKeys(prop.getProperty("ProductionWLUserName"));
+				txtPass.sendKeys(prop.getProperty("ProductionWLPassword"));
+			}
+			WebElement btnLogin = driver.findElement(By.className("formButton"));
+			btnLogin.click();
+			waitForTwoSeconds();
+			String pageSource = driver.getPageSource();
+			if (pageSource.contains("welcome"))
+			{
+				System.out.println("Successfully logged in to Weblogic Admin Console");
+				navigateToServers();
+				//startDeployProcess();
+			}
+			else
+			{
+				System.out.println("Something is wrong with Weblogic Admin Console");
+			}
 		}
 		else
 		{
 			System.out.println("Something is wrong with Weblogic Admin Console");
-			System.exit(0);
 		}
 	}
 
 	public void setEnvironment()
 	{
-		if (driver.getCurrentUrl().contains("7001"))
+		if (driver.getCurrentUrl().contains("localhost"))
 			environment = "LOCAL";
-		if (driver.getCurrentUrl().contains("hmg03"))
+		else if (driver.getCurrentUrl().contains("hmg03"))
 			environment = "HMG03";
-		if (driver.getCurrentUrl().contains("hmg05"))
+		else if (driver.getCurrentUrl().contains("hmg05"))
 			environment = "HMG05";
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom01ConsoleBR")))
 			environment = "DOM01";
@@ -97,22 +131,25 @@ public class WeblogicRestartController
 		WebElement lnkServers = driver.findElement(By.linkText("Servers"));
 		highLightElement(lnkServers);
 		lnkServers.click();
+		waitForTwoSeconds();
 		navigateToControl();
 	}
 
-	private void navigateToControl() {
-		waitForTwoSeconds();
+	private void navigateToControl() 
+	{
 		WebElement tabControl = driver.findElement(By.cssSelector("a[title*='Control- Tab']"));
+		waitForTenSeconds();
+		highLightElement(tabControl);
+		/*JavaScriptExecutor ex = (JavaScriptExecutor)driver;
+		ExecuteScript("arguments[0].click();", tabControl);*/
 		tabControl.click();
 		askUser();
 	}
-
-	String restartProcess = null;
-	int numOfInstancesToRestart = 0;
+	
 	public void askUser()
 	{
 		// Get Input from config file.
-		String inputFromUser = prop.getProperty("instancesToRestart");
+		String inputFromUser = prop.getProperty("numberOfInstancesToProcessInLoop");
 		
 		// Get input from user at runtime.
 		System.out.println("How many instances to be shutdown?");
@@ -125,7 +162,11 @@ public class WeblogicRestartController
 		}
 		numOfInstancesToRestart = Integer.parseInt(inputFromUser);
 		System.out.println(numOfInstancesToRestart + " instances to restart");
-		startProcess();
+		
+		//Starting the actual Process...
+		
+		//startProcess();
+		startReleaseProcess();
 	}
 
 	public String getUserInputFromPanel()
@@ -134,6 +175,7 @@ public class WeblogicRestartController
 		Image image = new ImageIcon(prop.getProperty("iconImage")).getImage();
 		JOptionPane pane = new JOptionPane("");
 		JPanel innerPanel = new JPanel();
+		//JDialog dialog = pane.createDialog("Are we ready to start deploy process?");
 		JDialog dialog = pane.createDialog("Are we ready to start deploy process?");
 		JTextField text = new JTextField(10);
 		innerPanel.add(text);
@@ -151,17 +193,13 @@ public class WeblogicRestartController
 		return input;
 	}
 	
-	int loop = 0, totalInstances = 0, remainingInstances = 0, elementId = 1;
-	HashMap<String,Integer> instanceNameAndNumber = null;
-	
-	public void startProcess() 
+	public void startReleaseProcess()
 	{
-		restartProcess = prop.getProperty("restartProcess");
-		String instanceName, instanceState,inputFromUser;
-		WebElement eleSelectInstance;
+		String instanceName= null;
 		
-		HashMap<String,String> instancesWithState = null;
-		//HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
+		HashMap<String,Integer> instanceNameAndNumber = null;
+		
+		restartProcess = prop.getProperty("restartProcess");
 		
 		instanceNameAndNumber = new HashMap<String, Integer>();
 		
@@ -182,8 +220,85 @@ public class WeblogicRestartController
 		else if (environment.equals("Services"))
 			totalInstances = Integer.parseInt(prop.getProperty("TotalServiceDomInstances"));
 		
-		loop = totalInstances / numOfInstancesToRestart;
-		System.out.println("Loop is of "+loop);
+		boolean isInstancePresent= false;
+		if (restartProcess.equals("release"))
+		{
+			for(int i=0;elementId<=totalInstances;i++)
+			 {
+				for (int j = 1; j <= numOfInstancesToRestart; j++) 
+				{
+					isInstancePresent = driver.findElements(By.id("name" + elementId)).size() >= 1;
+					if(isInstancePresent)
+					{
+						instanceName = driver.findElement(By.id("name" + elementId)).getText();
+						if(instanceName.contains("admin"))
+						{
+							elementId++;
+							j--;
+							continue;
+						}
+						instanceNameAndNumber.put(instanceName, elementId);
+						if(numOfInstancesToRestart != instanceNameAndNumber.size())
+							elementId++;
+					}
+				}
+				startSuspendProcess(instanceNameAndNumber);
+				waitForTwoSeconds();
+				startShutdownProcess(instanceNameAndNumber);
+				elementId++;
+				instanceNameAndNumber.clear();
+				//System.out.println("Waiting to normalize instances");
+				//waitForTenSeconds();
+				if(elementId>totalInstances)
+					 System.out.println("Shutdown Process for RELEASE is completed...");
+			 }
+		}
+	}
+	public void startSuspendProcess(HashMap<String, Integer> instanceNameAndNumber)
+	{
+		selectInstances(instanceNameAndNumber);
+		//waitForTenSeconds();
+		if(isSelectedInstancesAreRunning(instanceNameAndNumber))
+			suspendInstances(instanceNameAndNumber);
+		else
+			System.out.println("Selected Instances are not Running");
+	}
+	
+	public void startShutdownProcess(HashMap<String, Integer> instanceNameAndNumber)
+	{
+		selectInstances(instanceNameAndNumber);
+		if(isSelectedInstancesAreSuspended(instanceNameAndNumber))
+			shutDownInstances(instanceNameAndNumber);
+		else
+			System.out.println("Selected Instances are not yet Suspened");
+	}
+	public void startProcess() 
+	{
+		restartProcess = prop.getProperty("restartProcess");
+		String instanceName, instanceState,inputFromUser;
+		//WebElement eleSelectInstance;
+		boolean isInstancePresent= false;
+		//HashMap<String,String> instancesWithState = null;
+		//HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
+		HashMap<String,Integer> instanceNameAndNumber = null;
+		instanceNameAndNumber = new HashMap<String, Integer>();
+		
+		if (environment.equals("HMG03"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG03Instances"));
+		else if (environment.equals("HMG05"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG05Instances"));
+		else if (environment.equals("LOCAL"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalLocalInstances"));
+		else if (environment.equals("DOM01"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom01Instances"));
+		else if (environment.equals("DOM02"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom02Instances"));
+		else if (environment.equals("DOM03"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom03Instances"));
+		else if (environment.equals("DOM04"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom04Instances"));
+		else if (environment.equals("Services"))
+			totalInstances = Integer.parseInt(prop.getProperty("TotalServiceDomInstances"));
 		
 		if (restartProcess.equals("rolling"))
 		{
@@ -191,20 +306,24 @@ public class WeblogicRestartController
 			 {
 				for (int j = 1; j <= numOfInstancesToRestart; j++) 
 				{
-					instancesWithState = new HashMap<String, String>();
-					instanceName = driver.findElement(By.id("name" + elementId)).getText();
-					instanceState = driver.findElement(By.id("state" + elementId)).getText();
-					if(instanceName.equals("AdminServer(admin)"))
+					//instancesWithState = new HashMap<String, String>();
+					isInstancePresent = driver.findElements(By.id("name" + elementId)).size() > 1;
+					if(isInstancePresent)
 					{
-						elementId++;
-						j--;
-						continue;
-					}
-					instanceNameAndNumber.put(instanceName, elementId);
-					if(numOfInstancesToRestart != instanceNameAndNumber.size())
-						elementId++;
-					eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-					instancesWithState.put(instanceName, instanceState);
+						instanceName = driver.findElement(By.id("name" + elementId)).getText();
+						instanceState = driver.findElement(By.id("state" + elementId)).getText();
+						if(instanceName.equals("AdminServer(admin)"))
+						{
+							elementId++;
+							j--;
+							continue;
+						}
+						instanceNameAndNumber.put(instanceName, elementId);
+						if(numOfInstancesToRestart != instanceNameAndNumber.size())
+							elementId++;
+						//eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
+						//instancesWithState.put(instanceName, instanceState);
+				}
 				//	selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
 				}
 				selectInstances(instanceNameAndNumber);
@@ -212,13 +331,19 @@ public class WeblogicRestartController
 				{
 					suspendInstances(instanceNameAndNumber);
 					selectInstances(instanceNameAndNumber);
-					shutDownInstances(instanceNameAndNumber);
+					if(isSelectedInstancesAreSuspended(instanceNameAndNumber))
+						shutDownInstances(instanceNameAndNumber);
+					else
+						System.out.println("Selected Instances are not yet suspened");
 					selectInstances(instanceNameAndNumber);
-					startInstances(instanceNameAndNumber);
+					if(isSelectedInstancesAreShutdown(instanceNameAndNumber))
+						startInstances(instanceNameAndNumber);
+					else
+						System.out.println("Selected Instances are not in shutdown state");
 				}
 				elementId++;
 				instanceNameAndNumber.clear();
-				if(elementId>totalInstances)
+				if(elementId>=totalInstances)
 					System.out.println("Rolling restart Process is completed...");
 				System.out.println("Waiting to normalize instances");
 				waitForTenSeconds();
@@ -230,7 +355,7 @@ public class WeblogicRestartController
 			 {
 				for (int j = 1; j <= numOfInstancesToRestart; j++) 
 				{
-					instancesWithState = new HashMap<String, String>();
+					//instancesWithState = new HashMap<String, String>();
 					instanceName = driver.findElement(By.id("name" + elementId)).getText();
 					instanceState = driver.findElement(By.id("state" + elementId)).getText();
 					if(instanceName.equals("AdminServer(admin)"))
@@ -242,8 +367,8 @@ public class WeblogicRestartController
 					instanceNameAndNumber.put(instanceName, elementId);
 					if(numOfInstancesToRestart != instanceNameAndNumber.size())
 						elementId++;
-					eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-					instancesWithState.put(instanceName, instanceState);
+					//eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
+					//instancesWithState.put(instanceName, instanceState);
 					//selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
 				}
 				selectInstances(instanceNameAndNumber);
@@ -251,18 +376,19 @@ public class WeblogicRestartController
 				 {
 					suspendInstances(instanceNameAndNumber);
 					selectInstances(instanceNameAndNumber);
-					shutDownInstances(instanceNameAndNumber);
-					
-					
+					if(isSelectedInstancesAreSuspended(instanceNameAndNumber))
+						shutDownInstances(instanceNameAndNumber);
 				 }
 				 elementId++;
 				 instanceNameAndNumber.clear();
-				 System.out.println("Waiting to normalize instances");
-				 waitForTenSeconds();
+				 //System.out.println("Waiting to normalize instances");
+				// waitForTenSeconds();
+				 
 				/* if(elementId>totalInstances)
 					 System.out.println("Restart Process for RELEASE is completed...");*/
 			 }
-			while(true)
+			startDeployProcess();
+			/*while(true)
 			{
 				inputFromUser = getUserInputFromPanel();
 				if(inputFromUser.equalsIgnoreCase("wait"))
@@ -280,7 +406,7 @@ public class WeblogicRestartController
 					System.out.println("Please enter your input");
 				else
 					System.out.println("Please enter valid input");
-			}
+			}*/
 		}
 		else
 			System.out.println("Defined process '" + restartProcess+ "' is not correct");
@@ -289,46 +415,491 @@ public class WeblogicRestartController
 	private void startDeployProcess() 
 	{
 		System.out.println("Starting deploy process");
+		navigateToDeployments();
+		selectAndDeploy();
+		//activateChanges();
 	}
+	
+	public void selectAndDeploy() 
+	{
+		System.out.println("In Select and Deploy");
+		int totalDeployments = 0; 
+		int complatedDeployments =0;
+		
+		if (environment.equals("HMG03"))
+		{
+			totalDeployments = Integer.parseInt(prop.getProperty("TotalHMG03Deployments"));
+			boolean isSelectEstoreAvailabel = driver.findElements(By.cssSelector("input[title='Select Estore']")).size()>=1;
+			
+			if(isSelectEstoreAvailabel)
+			{
+				takeLockAndEdit();
+				WebElement selectEstore = driver.findElement(By.cssSelector("input[title='Select Estore']"));
+				selectEstore.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			boolean isSelectAtg_BccAvailabel = driver.findElements(By.cssSelector("input[title='Select atg_bcc']")).size()>=1;
+			if(isSelectAtg_BccAvailabel)
+			{
+				takeLockAndEdit();
+				WebElement selectBCC = driver.findElement(By.cssSelector("input[title='Select atg_bcc']"));
+				selectBCC.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			if(complatedDeployments==totalDeployments)
+			{
+				System.out.println("All '"+totalDeployments+"' deployments are completed.");
+				releaseLockConfiguration();
+			}
+			else
+				System.out.println("Deployments are going on");
+		}
+		else if (environment.equals("HMG05"))
+		{
+			totalDeployments = Integer.parseInt(prop.getProperty("TotalHMG05Deployments"));
+			boolean isSelectEstoreAvailabel = driver.findElements(By.cssSelector("input[title='Select Estore']")).size()>=1;
+			
+			if(isSelectEstoreAvailabel)
+			{
+				takeLockAndEdit();
+				WebElement selectEstore = driver.findElement(By.cssSelector("input[title='Select Estore']"));
+				selectEstore.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			boolean isSelectAtg_BccAvailabel = driver.findElements(By.cssSelector("input[title='Select EstoreCA']")).size()>=1;
+			if(isSelectAtg_BccAvailabel)
+			{
+				takeLockAndEdit();
+				WebElement selectBCC = driver.findElement(By.cssSelector("input[title='Select EstoreCA']"));
+				selectBCC.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			if(complatedDeployments==totalDeployments)
+			{
+				System.out.println("All '"+totalDeployments+"' deployments are completed.");
+				releaseLockConfiguration();
+			}
+			else
+				System.out.println("Deployments are going on");
+		}
+		else if (environment.equals("LOCAL"))
+		{
+		}
+		else if (environment.equals("DOM01"))
+		{
+			totalDeployments = Integer.parseInt(prop.getProperty("TotalDOM01Deployments"));
+			boolean isSelectDeploy1Availabel = driver.findElements(By.cssSelector("input[title='Select Estore']")).size()>=1;
+			
+			if(isSelectDeploy1Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy1 = driver.findElement(By.cssSelector("input[title='Select Estore']"));
+				selectDeploy1.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			boolean isSelectDeploy2Availabel = driver.findElements(By.cssSelector("input[title='Select EstoreSLM01']")).size()>=1;
+			if(isSelectDeploy2Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy2 = driver.findElement(By.cssSelector("input[title='Select EstoreSLM01']"));
+				selectDeploy2.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			boolean isSelectDeploy3Availabel = driver.findElements(By.cssSelector("input[title='Select EstoreWS']")).size()>=1;
+			if(isSelectDeploy3Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy3 = driver.findElement(By.cssSelector("input[title='Select EstoreWS']"));
+				selectDeploy3.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			if(complatedDeployments==totalDeployments)
+			{
+				System.out.println("All '"+totalDeployments+"' deployments are completed.");
+				releaseLockConfiguration();
+			}
+			else
+				System.out.println("Deployments are going on");
+		}
+		else if (environment.equals("DOM02"))
+		{
+			totalDeployments = Integer.parseInt(prop.getProperty("TotalDOM02Deployments"));
+			boolean isSelectDeploy1Availabel = driver.findElements(By.cssSelector("input[title='Select Estore']")).size()>=1;
+			
+			if(isSelectDeploy1Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy1 = driver.findElement(By.cssSelector("input[title='Select Estore']"));
+				selectDeploy1.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			boolean isSelectDeploy2Availabel = driver.findElements(By.cssSelector("input[title='Select EstoreSLM01']")).size()>=1;
+			if(isSelectDeploy2Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy2 = driver.findElement(By.cssSelector("input[title='Select EstoreSLM01']"));
+				selectDeploy2.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			boolean isSelectDeploy3Availabel = driver.findElements(By.cssSelector("input[title='Select EstoreWS']")).size()>=1;
+			if(isSelectDeploy3Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy3 = driver.findElement(By.cssSelector("input[title='Select EstoreWS']"));
+				selectDeploy3.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			if(complatedDeployments==totalDeployments)
+			{
+				System.out.println("All '"+totalDeployments+"' deployments are completed.");
+				releaseLockConfiguration();
+			}
+			else
+				System.out.println("Deployments are going on");
+		}
+		else if (environment.equals("DOM03"))
+		{
+			totalDeployments = Integer.parseInt(prop.getProperty("TotalDOM03Deployments"));
+			boolean isSelectDeploy1Availabel = driver.findElements(By.cssSelector("input[title='Select Estore']")).size()>=1;
+			
+			if(isSelectDeploy1Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy1 = driver.findElement(By.cssSelector("input[title='Select Estore']"));
+				selectDeploy1.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			if(complatedDeployments==totalDeployments)
+			{
+				System.out.println("All '"+totalDeployments+"' deployments are completed.");
+				releaseLockConfiguration();
+			}
+			else
+				System.out.println("Deployments are going on");
+		}
+		else if (environment.equals("DOM04"))
+		{
+			totalDeployments = Integer.parseInt(prop.getProperty("TotalDOM01Deployments"));
+			boolean isSelectDeploy1Availabel = driver.findElements(By.cssSelector("input[title='Select Estore']")).size()>=1;
+			
+			if(isSelectDeploy1Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy1 = driver.findElement(By.cssSelector("input[title='Select Estore']"));
+				selectDeploy1.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			boolean isSelectDeploy2Availabel = driver.findElements(By.cssSelector("input[title='Select Estore-nsps30']")).size()>=1;
+			if(isSelectDeploy2Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy2 = driver.findElement(By.cssSelector("input[title='Select Estore-nsps30']"));
+				selectDeploy2.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			if(complatedDeployments==totalDeployments)
+			{
+				System.out.println("All '"+totalDeployments+"' deployments are completed.");
+				releaseLockConfiguration();
+			}
+			else
+				System.out.println("Deployments are going on");
+		}
+		else if (environment.equals("Services"))
+		{
+			totalDeployments = Integer.parseInt(prop.getProperty("TotalDOM02Deployments"));
+			boolean isSelectDeploy1Availabel = driver.findElements(By.cssSelector("input[title='Select EstoreCA']")).size()>=1;
+			
+			if(isSelectDeploy1Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy1 = driver.findElement(By.cssSelector("input[title='Select EstoreCA']"));
+				selectDeploy1.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			boolean isSelectDeploy2Availabel = driver.findElements(By.cssSelector("input[title='Select EstoreWS02']")).size()>=1;
+			if(isSelectDeploy2Availabel)
+			{
+				takeLockAndEdit();
+				WebElement selectDeploy2 = driver.findElement(By.cssSelector("input[title='Select EstoreWS02']"));
+				selectDeploy2.click();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
+			}
+			else
+				System.out.println("Selected Deployment is not available");
+			
+			if(complatedDeployments==totalDeployments)
+			{
+				System.out.println("All '"+totalDeployments+"' deployments are completed.");
+				releaseLockConfiguration();
+			}
+			else
+				System.out.println("Deployments are going on");
+		}
+	}
+	
+	public void takeLockAndEdit()
+	{
+		boolean isBtnLockAndEditEnabled = driver.findElement(By.cssSelector("button[name='save']")).isEnabled();
+		if(isBtnLockAndEditEnabled)
+		{
+			System.out.println("Lock & Edit button is Enabled");
+			WebElement btnLockAndEdit = driver.findElement(By.cssSelector("button[name='save']"));
+			highLightElement(btnLockAndEdit);
+			btnLockAndEdit.click();
+		}
+		else
+			System.out.println("Lock & Edit button is Disabled");
+	}
+	
+	public void activateChanges()
+	{
+		boolean isBtnActivateChangesEnabled = driver.findElement(By.cssSelector("button[name='save']")).isEnabled();
+		boolean isLblSuccessMsgAvaialbe=false;
+		if(isBtnActivateChangesEnabled)
+		{
+			System.out.println("Activate changes button is Enabled");
+			WebElement btnActivateChanges = driver.findElement(By.cssSelector("button[name='save']"));
+			//System.out.println("Text on Activate changes button is '"+btnActivateChanges.getText()+"'");
+			highLightElement(btnActivateChanges);
+			btnActivateChanges.click();
+			waitForTwoSeconds();
+			isLblSuccessMsgAvaialbe = driver.findElements(By.cssSelector("span[class='message_SUCCESS']")).size()>=1;
+			
+			System.out.println("Is success message availabel - "+isLblSuccessMsgAvaialbe);
+			if(isLblSuccessMsgAvaialbe)
+			{
+				WebElement lblSuccessMsg = driver.findElement(By.cssSelector("span[class='message_SUCCESS']"));
+				System.out.println("lbl Msg after chanegs activated is - "+lblSuccessMsg.getText());
+				if(lblSuccessMsg.getText().contains("All changes have been activated"))
+				{
+					System.out.println("Changes have been activated.");
+					//releaseLockConfiguration();
+					boolean isBtnReleaseLockEnabled =  driver.findElement(By.cssSelector("button[name='cancel']")).isEnabled();
+					if(!isBtnReleaseLockEnabled)
+						System.out.println("Lock is also released");
+					else
+						System.out.println("Lock is not yet released");
+				}
+				else
+					System.out.println("Something is wrong with deployment");
+			}
+			else
+				System.out.println("Something is wrong with deployment");
+		}
+		else
+			System.out.println("Activate changes button is Disabled");
+	}	
 
+	public void releaseLockConfiguration()
+	{
+		boolean isBtnReleaseLockEnabled =  driver.findElement(By.cssSelector("button[name='cancel']")).isEnabled();
+		if(isBtnReleaseLockEnabled)
+		{
+			System.out.println("Release button is Enabled");
+			WebElement btnReleaseLock = driver.findElement(By.cssSelector("button[name='cancel']"));
+			highLightElement(btnReleaseLock);
+			btnReleaseLock.click();
+		}
+		else
+			System.out.println("Lock is already released, button is Disabled");
+	}
+	public void updateDeployments()
+	{
+		WebElement btnFinish;
+		boolean isBtnUpddateAvailable = driver.findElements(By.cssSelector("button[name='Update']")).size()>=1;
+		if(isBtnUpddateAvailable)
+		{	WebElement btnUpdate;
+			btnUpdate = driver.findElement(By.cssSelector("button[name='Update']"));
+			System.out.println("Updating changes");
+			btnUpdate.click();
+			waitForTwoSeconds();
+			btnFinish = driver.findElement(By.cssSelector("button[name='Finish']"));
+			btnFinish.click();
+		}
+		else
+			System.out.println("Update Button is not available");
+	}
+	int complatedDeployments =0;
+	public int verifyDeploymentSuccessMsg()
+	{
+		
+		boolean isLblSuccessMsgAvaialbe =false;
+		isLblSuccessMsgAvaialbe = driver.findElements(By.cssSelector("span[class='message_SUCCESS']")).size()>=1;
+		
+		if(isLblSuccessMsgAvaialbe)
+		{
+			WebElement lblSuccessMsg = driver.findElement(By.cssSelector("span[class='message_SUCCESS']"));
+			if(lblSuccessMsg.getText().contains("Selected Deployments were updated."))
+			{
+				complatedDeployments++;
+				System.out.println("Selected Deployments were updated. Please Activate the changes");
+			}
+		}
+		else
+			System.out.println("Success Message is not available");
+		return complatedDeployments;
+	}
+	
+	
+
+	public void navigateToDeployments()
+	{
+		WebElement lnkDeployments =null;
+		waitForTwoSeconds();
+		boolean isLnkDeploymentsAvailable = driver.findElements(By.id("linkAppDeploymentsControlPage")).size()>=1;
+		
+		if(isLnkDeploymentsAvailable)
+		{
+			System.out.println("Going to Deployments page");
+			lnkDeployments = driver.findElement(By.id("linkAppDeploymentsControlPage"));
+			lnkDeployments.click();
+		}
+	}
+	int selectCount =0;
 	public void selectInstances(HashMap<String, Integer> instanceNameAndNumber2)
 	{
 		Set keySet = instanceNameAndNumber2.keySet();
 		Iterator itr = keySet.iterator();
 		WebElement selectEle=null;
 		String instanceName = null;
+		
 		while (itr.hasNext()) 
 		{
 			try
 			{
 				instanceName = itr.next().toString();
 				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-				selectEle.click();
+				selectCount++;
+				if(selectCount>=18)
+				{
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("window.scrollBy(0,250)", "");
+				}
+				else
+				{
+					//System.out.println("is element selected? - "+selectEle.isSelected());
+					if(!selectEle.isSelected())
+						selectEle.click();
+				}
 			}
 			catch(StaleElementReferenceException e)
 			{
+				System.out.println("Caught Stale Element Exception... continuing with execution");
 				instanceName = itr.next().toString();
 				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
 				selectEle.click();
-				/*System.out.println("Caught Stale Element Exception... continuing with execution");
-				selectEle = (WebElement) itr.next();
-				selectEle.click();*/
 			}
 		}
 	}
-	
+	public void waitForSec()
+	{
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+	}
 	public void refreshPage()
 	{
 		waitForTenSeconds();
 		driver.navigate().refresh();
 	}
-	public void startInstances(HashMap<String, Integer> instanceNameAndNumber2) 
+	
+	public void startInstances(HashMap<String, Integer> instanceNameAndNumber) 
 	{
 		System.out.println("Starting Instances");
 		WebElement btnStart = driver.findElement(By.cssSelector("button[name='Start']"));
 		highLightElement(btnStart);
 		btnStart.click();
-		if(environment.equals("HMG05")||environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04") ||environment.equals("Services"))
+		if(environment.equals("HMG03")||environment.equals("HMG05")||environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04") ||environment.equals("Services"))
 			selectServerLifeCycleAssistant();
 		//startAutoRefresh();
 		try {
@@ -383,45 +954,83 @@ public class WeblogicRestartController
 			//stopAutoRefresh();
 		}
 	}
-
-	
 	
 	public void suspendInstances(HashMap<String, Integer> instanceNameAndNumber) 
 	{
+		int suspendedInstances=0;
 		System.out.println("Suspending Instances");
-		WebElement btnSuspend = driver.findElement(By.cssSelector("button[name='Suspend']"));
-		highLightElement(btnSuspend);
-		btnSuspend.click();
-		WebElement lnkForceSuspend = driver.findElement(By.linkText("Force Suspend Now"));
-		highLightElement(lnkForceSuspend);
-		lnkForceSuspend.click();
-		if(environment.equals("HMG05"))
+		//WebElement btnSuspend = null;
+		List<WebElement> suspendButtons = new ArrayList<WebElement>(); 
+		suspendButtons= driver.findElements(By.cssSelector("button[name='Suspend']"));
+		//waitForTwoSeconds();
+		Iterator<WebElement> eleItr = suspendButtons.iterator();
+		while (eleItr.hasNext()) 
 		{
-			selectServerLifeCycleAssistant();
+			WebElement btn = (WebElement) eleItr.next();
+			highLightElement(btn);
+			try{
+				btn.click();
+			}
+			catch(WebDriverException e)
+			{
+				if(e.getMessage().contains("Element is not clickable at point"))
+					continue;
+			}
 		}
-		startAutoRefresh();
+		
+		waitForTwoSeconds();
+		//btnSuspend.click();
+		
+		List<WebElement> lnkForceSuspend = new ArrayList<WebElement>(); 
+		lnkForceSuspend= driver.findElements(By.linkText("Force Suspend Now"));
+		//waitForTwoSeconds();
+		Iterator<WebElement> eleLnkItr = lnkForceSuspend.iterator();
+		while (eleLnkItr.hasNext()) 
+		{
+			WebElement btn = (WebElement) eleLnkItr.next();
+			highLightElement(btn);
+			try{
+				btn.click();
+			}
+			catch(WebDriverException e)
+			{
+				if(e.getMessage().contains("Element is not clickable at point"))
+					continue;
+			}
+		}
+		
+		if(environment.equals("HMG03")||environment.equals("HMG05")||environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04") ||environment.equals("Services"))
+			selectServerLifeCycleAssistant();
+		//startAutoRefresh();
 		try {
 			Set keySet = instanceNameAndNumber.keySet();
 			Iterator itr = keySet.iterator();
+			String instanceName = null;
+			String instanceState = null;
+			Integer instanceNumber = null;
 			while (itr.hasNext()) 
 			{
+				instanceName = (String) itr.next();
+				instanceNumber = instanceNameAndNumber.get(instanceName);
 				while(true)
 				{
-					String instanceName = null;
-					String instanceState = null;
-					Integer instanceNumber = null;
-					instanceName = (String) itr.next();
-					instanceNumber = instanceNameAndNumber.get(instanceName);
+					refreshPage();
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
-					System.out.println("Instance is '"+instanceName+"' and its state is '"+instanceState+"'");
+					//System.out.println("Instance is '"+instanceName+"' and its state is '"+instanceState+"'");
 					if (instanceState.equals("ADMIN"))
 					{
 						System.out.println("'"+instanceName + "' got suspended");
+						suspendedInstances++;
 						break;
 					}
 				}
+				if(suspendedInstances==instanceNameAndNumber.size())
+					System.out.println("Total '"+suspendedInstances+"' got suspended");
+				else
+					System.out.println("something is wrong and some instances are not yet suspended");
 			}
-			stopAutoRefresh();
+			
+			//stopAutoRefresh();
 		}
 		catch(StaleElementReferenceException e)
 		{
@@ -445,7 +1054,7 @@ public class WeblogicRestartController
 					}
 				}
 			}
-			stopAutoRefresh();
+			//stopAutoRefresh();
 		}
 	}
 
@@ -466,6 +1075,13 @@ public class WeblogicRestartController
 			instanceNumber = instanceNameAndNumber.get(instanceName);
 			instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
 			System.out.println("Instance is '" + instanceName + "' and its state is '" + instanceState + "'");
+			
+			if(instanceState.equals("ADMIN"))
+			{
+				System.out.println("'"+instanceName+"' is already Suspended." );
+				//instanceNameAndNumber.remove(instanceName);
+				//continue;
+			}
 			if(instanceState.equals("RUNNING"))
 			{
 				running++;
@@ -473,12 +1089,80 @@ public class WeblogicRestartController
 		}
 		if(running==mapSize)
 		{
-			System.out.println("Selected instances are running "+running+" "+mapSize);
+			System.out.println("Total Running instances - '"+running+"' are equal to map's size '"+mapSize+"'");
 			return true;
 		}
 		else
 		{
-			System.out.println("Selected instances are NOT Running "+running+" "+mapSize);
+			System.out.println("Total Running instances - '"+running+"' and map's size is '"+mapSize+"'");
+			return false;
+		}
+	}
+	
+	public boolean isSelectedInstancesAreSuspended(HashMap<String,Integer> instanceNameAndNumber)
+	{
+		Set keySet = instanceNameAndNumber.keySet();
+		Iterator itr = keySet.iterator();
+		int suspended=0,mapSize=0;
+		
+		mapSize = instanceNameAndNumber.size();
+		while (itr.hasNext())
+		{
+			String instanceName = null;
+			String instanceState = null;
+			Integer instanceNumber = null;
+
+			instanceName = (String) itr.next();
+			instanceNumber = instanceNameAndNumber.get(instanceName);
+			instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
+			System.out.println("Instance '" + instanceName + "' in '" + instanceState + "' state");
+			if(instanceState.equals("ADMIN"))
+			{
+				suspended++;
+			}
+		}
+		if(suspended==mapSize)
+		{
+			System.out.println("All selected instances are suspended "+suspended+" "+mapSize);
+			return true;
+		}
+		else
+		{
+			System.out.println("Selected instances are NOT suspended "+suspended+" "+mapSize);
+			return false;
+		}
+	}
+	
+	public boolean isSelectedInstancesAreShutdown(HashMap<String,Integer> instanceNameAndNumber)
+	{
+		Set keySet = instanceNameAndNumber.keySet();
+		Iterator itr = keySet.iterator();
+		int shutdown=0,mapSize=0;
+		
+		mapSize = instanceNameAndNumber.size();
+		while (itr.hasNext())
+		{
+			String instanceName = null;
+			String instanceState = null;
+			Integer instanceNumber = null;
+
+			instanceName = (String) itr.next();
+			instanceNumber = instanceNameAndNumber.get(instanceName);
+			instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
+			System.out.println("Instance '" + instanceName + "' in '" + instanceState + "' state");
+			if(instanceState.equals("SHUTDOWN"))
+			{
+				shutdown++;
+			}
+		}
+		if(shutdown==mapSize)
+		{
+			System.out.println("All selected instances are shutdown "+shutdown+" "+mapSize);
+			return true;
+		}
+		else
+		{
+			System.out.println("Selected instances are NOT shutdown "+shutdown+" "+mapSize);
 			return false;
 		}
 	}
@@ -492,14 +1176,46 @@ public class WeblogicRestartController
 	public void shutDownInstances(HashMap<String, Integer> instanceNameAndNumber) 
 	{
 		System.out.println("Shutting down Instances");
-		WebElement btnShutdown = driver.findElement(By.cssSelector("button[name='Shutdown']"));
-		highLightElement(btnShutdown);
-		btnShutdown.click();
+		
+		List<WebElement> shutDownButtons = new ArrayList<WebElement>(); 
+		shutDownButtons= driver.findElements(By.cssSelector("button[name='Shutdown']"));
+		//waitForTwoSeconds();
+		Iterator<WebElement> eleItr = shutDownButtons.iterator();
+		while (eleItr.hasNext()) 
+		{
+			WebElement btn = (WebElement) eleItr.next();
+			highLightElement(btn);
+			try{
+				btn.click();
+			}
+			catch(WebDriverException e)
+			{
+				if(e.getMessage().contains("Element is not clickable at point"))
+					continue;
+			}
+		}
+		
 		waitForTwoSeconds();
-		WebElement lnkForceShutdown = driver.findElement(By.linkText("Force Shutdown Now"));
-		highLightElement(lnkForceShutdown);
-		lnkForceShutdown.click();
-		if(environment.equals("HMG05"))
+		
+		List<WebElement> lnkForceShutdown = new ArrayList<WebElement>(); 
+		lnkForceShutdown= driver.findElements(By.linkText("Force Shutdown Now"));
+		//waitForTwoSeconds();
+		Iterator<WebElement> eleLnkItr = lnkForceShutdown.iterator();
+		while (eleLnkItr.hasNext()) 
+		{
+			WebElement btn = (WebElement) eleLnkItr.next();
+			highLightElement(btn);
+			try{
+				btn.click();
+			}
+			catch(WebDriverException e)
+			{
+				if(e.getMessage().contains("Element is not clickable at point"))
+					continue;
+			}
+		}
+		
+		if(environment.equals("HMG03")||environment.equals("HMG05")||environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04") ||environment.equals("Services"))
 			selectServerLifeCycleAssistant();
 		//startAutoRefresh();
 		try {
@@ -513,14 +1229,15 @@ public class WeblogicRestartController
 				instanceName = (String) itr.next();
 				instanceNumber = instanceNameAndNumber.get(instanceName);
 				
-				while (true) 
+				while(true) 
 				{
+					refreshPage();
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
 					//System.out.println("Instance is '" + instanceName + "' and its state is '" + instanceState + "'");
-					refreshPage();
 					if (instanceState.equals("SHUTDOWN")) 
 					{
 						System.out.println("'"+instanceName + "' got shutdown");
+						totalShutdownInstances++;
 						break;
 					}
 				}
@@ -529,6 +1246,7 @@ public class WeblogicRestartController
 		}
 		catch(StaleElementReferenceException e)
 		{
+			System.out.println("Caught Stale Element Exception... continuing with execution");
 			Set keySet = instanceNameAndNumber.keySet();
 			Iterator itr = keySet.iterator();
 			String instanceName = null;
@@ -541,10 +1259,10 @@ public class WeblogicRestartController
 				
 				while (true) 
 				{
-					instanceNumber = instanceNameAndNumber.get(instanceName);
+					//instanceNumber = instanceNameAndNumber.get(instanceName);
+					refreshPage();
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
 					//System.out.println("Instance is '" + instanceName + "' and its state is '" + instanceState + "'");
-					refreshPage();
 					if (instanceState.equals("SHUTDOWN")) 
 					{
 						System.out.println("'"+instanceName + "' got shutdown");
@@ -633,11 +1351,16 @@ public class WeblogicRestartController
 			System.out.println("Auto Refresh is not running");
 		}
 	}
-
+	
+	public void selectProcess()
+	{
+		
+	}
 	public static void main(String[] args) throws FileNotFoundException
 	{
 		WeblogicRestartController wl = new WeblogicRestartController();
 		wl.setProperties();
-		System.exit(0);
+		wl.setWebdriver();
+		wl.loginToWebLogic();
 	}
 }

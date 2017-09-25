@@ -26,22 +26,21 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.Sleeper;
 
-import com.gargoylesoftware.htmlunit.javascript.background.JavaScriptExecutor;
-
-public class WeblogicRestartController 
+public class WeblogicController 
 {
 	private Properties prop = new Properties();
 	private WebDriver driver;
 	private String environment;
-	private String restartProcess = null;
+	private String process = null;
 	private int totalShutdownInstances=0;
-	private int numOfInstancesToRestart = 0;
-	private int loop = 0;
+	private int numOfInstancesToProcess = 0;
 	private int totalInstances = 0;
 	private int remainingInstances = 0;
 	private int elementId = 1;
+	private int complatedDeployments =0;
+	private int selectCount =0;
+	private int failedToStartInstancesCount=0;
 	
 	public void setProperties() throws FileNotFoundException {
 		InputStream inputPropFile = new FileInputStream("./resources/properties/weblogicConfigs.properties");
@@ -94,6 +93,7 @@ public class WeblogicRestartController
 				System.out.println("Successfully logged in to Weblogic Admin Console");
 				navigateToServers();
 				//startDeployProcess();
+				//selectProcess();
 			}
 			else
 			{
@@ -109,21 +109,45 @@ public class WeblogicRestartController
 	public void setEnvironment()
 	{
 		if (driver.getCurrentUrl().contains("localhost"))
+		{
 			environment = "LOCAL";
+			totalInstances = Integer.parseInt(prop.getProperty("TotalLocalInstances"));
+		}
 		else if (driver.getCurrentUrl().contains("hmg03"))
+		{
 			environment = "HMG03";
+			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG03Instances"));
+		}
 		else if (driver.getCurrentUrl().contains("hmg05"))
+		{
 			environment = "HMG05";
+			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG05Instances"));
+		}
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom01ConsoleBR")))
+		{
 			environment = "DOM01";
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom01Instances"));
+		}
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom02ConsoleBR")))
+		{
 			environment = "DOM02";
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom02Instances"));
+		}
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom03ConsoleBR")))
+		{
 			environment = "DOM03";
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom03Instances"));
+		}
 		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom04ConsoleBR")))
+		{
 			environment = "DOM04";
+			totalInstances = Integer.parseInt(prop.getProperty("TotalDom04Instances"));
+		}
 		else if (driver.getCurrentUrl().contains(prop.getProperty("DomServicesBR")))
+		{
 			environment = "Services";
+			totalInstances = Integer.parseInt(prop.getProperty("TotalServiceDomInstances"));
+		}
 	}
 
 	public void navigateToServers()
@@ -160,13 +184,12 @@ public class WeblogicRestartController
 			System.out.println("Please enter your input");
 			askUser();
 		}
-		numOfInstancesToRestart = Integer.parseInt(inputFromUser);
-		System.out.println(numOfInstancesToRestart + " instances to restart");
+		numOfInstancesToProcess = Integer.parseInt(inputFromUser);
+		System.out.println(numOfInstancesToProcess + " instances to restart");
 		
 		//Starting the actual Process...
 		
-		//startProcess();
-		startReleaseProcess();
+		selectProcess();
 	}
 
 	public String getUserInputFromPanel()
@@ -192,68 +215,112 @@ public class WeblogicRestartController
 		input = text.getText();
 		return input;
 	}
-	
-	public void startReleaseProcess()
+	public void generateMap()
 	{
 		String instanceName= null;
-		
 		HashMap<String,Integer> instanceNameAndNumber = null;
-		
-		restartProcess = prop.getProperty("restartProcess");
-		
 		instanceNameAndNumber = new HashMap<String, Integer>();
-		
-		if (environment.equals("HMG03"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG03Instances"));
-		else if (environment.equals("HMG05"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG05Instances"));
-		else if (environment.equals("LOCAL"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalLocalInstances"));
-		else if (environment.equals("DOM01"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom01Instances"));
-		else if (environment.equals("DOM02"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom02Instances"));
-		else if (environment.equals("DOM03"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom03Instances"));
-		else if (environment.equals("DOM04"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom04Instances"));
-		else if (environment.equals("Services"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalServiceDomInstances"));
-		
 		boolean isInstancePresent= false;
-		if (restartProcess.equals("release"))
+
+		for (int i = 0; elementId <= totalInstances; i++) 
 		{
-			for(int i=0;elementId<=totalInstances;i++)
-			 {
-				for (int j = 1; j <= numOfInstancesToRestart; j++) 
+			for (int j = 1; j <= numOfInstancesToProcess; j++) 
+			{
+				isInstancePresent = driver.findElements(By.id("name" + elementId)).size() >= 1;
+				if (isInstancePresent) 
 				{
-					isInstancePresent = driver.findElements(By.id("name" + elementId)).size() >= 1;
-					if(isInstancePresent)
+					instanceName = driver.findElement(By.id("name" + elementId)).getText();
+					if (instanceName.contains("admin")) 
 					{
-						instanceName = driver.findElement(By.id("name" + elementId)).getText();
-						if(instanceName.contains("admin"))
-						{
-							elementId++;
-							j--;
-							continue;
-						}
-						instanceNameAndNumber.put(instanceName, elementId);
-						if(numOfInstancesToRestart != instanceNameAndNumber.size())
-							elementId++;
+						elementId++;
+						j--;
+						continue;
 					}
+					instanceNameAndNumber.put(instanceName, elementId);
+					if (numOfInstancesToProcess != instanceNameAndNumber.size())
+						elementId++;
 				}
-				startSuspendProcess(instanceNameAndNumber);
-				waitForTwoSeconds();
-				startShutdownProcess(instanceNameAndNumber);
-				elementId++;
-				instanceNameAndNumber.clear();
-				//System.out.println("Waiting to normalize instances");
-				//waitForTenSeconds();
-				if(elementId>totalInstances)
-					 System.out.println("Shutdown Process for RELEASE is completed...");
-			 }
+			}
+			elementId++;
+			instanceNameAndNumber.clear();
+			if (elementId > totalInstances)
+			{
+				elementId=1;
+				System.out.println("Shutdown Process for RELEASE is completed...");
+			}
 		}
 	}
+	public void shutDownProcess()
+	{
+		String instanceName= null;
+		HashMap<String,Integer> instanceNameAndNumber = null;
+		instanceNameAndNumber = new HashMap<String, Integer>();
+		boolean isInstancePresent= false;
+		for(int i=0;elementId<=totalInstances;i++)
+		{
+			for (int j = 1; j <= numOfInstancesToProcess; j++) 
+			{
+				isInstancePresent = driver.findElements(By.id("name" + elementId)).size() >= 1;
+				if(isInstancePresent)
+				{
+					instanceName = driver.findElement(By.id("name" + elementId)).getText();
+					if(instanceName.contains("admin"))
+					{
+						elementId++;
+						j--;
+						continue;
+					}
+					instanceNameAndNumber.put(instanceName, elementId);
+					if(numOfInstancesToProcess != instanceNameAndNumber.size())
+						elementId++;
+				}
+			}
+			startSuspendProcess(instanceNameAndNumber);
+			waitForTwoSeconds();
+			startShutdownProcess(instanceNameAndNumber);
+			elementId++;
+			instanceNameAndNumber.clear();
+			//System.out.println("Waiting to normalize instances");
+			//waitForTenSeconds();
+			if(elementId>totalInstances)
+				System.out.println("Shutdown Process for RELEASE is completed...");
+		}
+	}
+	
+	public void suspendProcess()
+	{
+		String instanceName= null;
+		HashMap<String,Integer> instanceNameAndNumber = null;
+		instanceNameAndNumber = new HashMap<String, Integer>();
+		boolean isInstancePresent= false;
+		for(int i=0;elementId<=totalInstances;i++)
+		{
+			for (int j = 1; j <= numOfInstancesToProcess; j++) 
+			{
+				isInstancePresent = driver.findElements(By.id("name" + elementId)).size() >= 1;
+				if(isInstancePresent)
+				{
+					instanceName = driver.findElement(By.id("name" + elementId)).getText();
+					if(instanceName.contains("admin"))
+					{
+						elementId++;
+						j--;
+						continue;
+					}
+					instanceNameAndNumber.put(instanceName, elementId);
+					if(numOfInstancesToProcess != instanceNameAndNumber.size())
+						elementId++;
+				}
+			}
+			startSuspendProcess(instanceNameAndNumber);
+			waitForTwoSeconds();
+			elementId++;
+			instanceNameAndNumber.clear();
+			if(elementId>totalInstances)
+				System.out.println("Suspend Process for RELEASE is completed...");
+		}
+	}
+	
 	public void startSuspendProcess(HashMap<String, Integer> instanceNameAndNumber)
 	{
 		selectInstances(instanceNameAndNumber);
@@ -272,152 +339,18 @@ public class WeblogicRestartController
 		else
 			System.out.println("Selected Instances are not yet Suspened");
 	}
-	public void startProcess() 
-	{
-		restartProcess = prop.getProperty("restartProcess");
-		String instanceName, instanceState,inputFromUser;
-		//WebElement eleSelectInstance;
-		boolean isInstancePresent= false;
-		//HashMap<String,String> instancesWithState = null;
-		//HashMap<WebElement, HashMap<String,String>> selectWithInstancesAndState = new HashMap<WebElement,HashMap<String,String>>();
-		HashMap<String,Integer> instanceNameAndNumber = null;
-		instanceNameAndNumber = new HashMap<String, Integer>();
-		
-		if (environment.equals("HMG03"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG03Instances"));
-		else if (environment.equals("HMG05"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG05Instances"));
-		else if (environment.equals("LOCAL"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalLocalInstances"));
-		else if (environment.equals("DOM01"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom01Instances"));
-		else if (environment.equals("DOM02"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom02Instances"));
-		else if (environment.equals("DOM03"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom03Instances"));
-		else if (environment.equals("DOM04"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom04Instances"));
-		else if (environment.equals("Services"))
-			totalInstances = Integer.parseInt(prop.getProperty("TotalServiceDomInstances"));
-		
-		if (restartProcess.equals("rolling"))
-		{
-			for(int i=0;elementId<=totalInstances;i++)
-			 {
-				for (int j = 1; j <= numOfInstancesToRestart; j++) 
-				{
-					//instancesWithState = new HashMap<String, String>();
-					isInstancePresent = driver.findElements(By.id("name" + elementId)).size() > 1;
-					if(isInstancePresent)
-					{
-						instanceName = driver.findElement(By.id("name" + elementId)).getText();
-						instanceState = driver.findElement(By.id("state" + elementId)).getText();
-						if(instanceName.equals("AdminServer(admin)"))
-						{
-							elementId++;
-							j--;
-							continue;
-						}
-						instanceNameAndNumber.put(instanceName, elementId);
-						if(numOfInstancesToRestart != instanceNameAndNumber.size())
-							elementId++;
-						//eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-						//instancesWithState.put(instanceName, instanceState);
-				}
-				//	selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
-				}
-				selectInstances(instanceNameAndNumber);
-				if(isSelectedInstancesAreRunning(instanceNameAndNumber))
-				{
-					suspendInstances(instanceNameAndNumber);
-					selectInstances(instanceNameAndNumber);
-					if(isSelectedInstancesAreSuspended(instanceNameAndNumber))
-						shutDownInstances(instanceNameAndNumber);
-					else
-						System.out.println("Selected Instances are not yet suspened");
-					selectInstances(instanceNameAndNumber);
-					if(isSelectedInstancesAreShutdown(instanceNameAndNumber))
-						startInstances(instanceNameAndNumber);
-					else
-						System.out.println("Selected Instances are not in shutdown state");
-				}
-				elementId++;
-				instanceNameAndNumber.clear();
-				if(elementId>=totalInstances)
-					System.out.println("Rolling restart Process is completed...");
-				System.out.println("Waiting to normalize instances");
-				waitForTenSeconds();
-			 }
-		}
-		else if (restartProcess.equals("release"))
-		{
-			for(int i=0;elementId<=totalInstances;i++)
-			 {
-				for (int j = 1; j <= numOfInstancesToRestart; j++) 
-				{
-					//instancesWithState = new HashMap<String, String>();
-					instanceName = driver.findElement(By.id("name" + elementId)).getText();
-					instanceState = driver.findElement(By.id("state" + elementId)).getText();
-					if(instanceName.equals("AdminServer(admin)"))
-					{
-						elementId++;
-						j--;
-						continue;
-					}
-					instanceNameAndNumber.put(instanceName, elementId);
-					if(numOfInstancesToRestart != instanceNameAndNumber.size())
-						elementId++;
-					//eleSelectInstance = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-					//instancesWithState.put(instanceName, instanceState);
-					//selectWithInstancesAndState.put(eleSelectInstance,instancesWithState);
-				}
-				selectInstances(instanceNameAndNumber);
-				 if(isSelectedInstancesAreRunning(instanceNameAndNumber))
-				 {
-					suspendInstances(instanceNameAndNumber);
-					selectInstances(instanceNameAndNumber);
-					if(isSelectedInstancesAreSuspended(instanceNameAndNumber))
-						shutDownInstances(instanceNameAndNumber);
-				 }
-				 elementId++;
-				 instanceNameAndNumber.clear();
-				 //System.out.println("Waiting to normalize instances");
-				// waitForTenSeconds();
-				 
-				/* if(elementId>totalInstances)
-					 System.out.println("Restart Process for RELEASE is completed...");*/
-			 }
-			startDeployProcess();
-			/*while(true)
-			{
-				inputFromUser = getUserInputFromPanel();
-				if(inputFromUser.equalsIgnoreCase("wait"))
-				{
-					waitForTenSeconds();
-				}
-				else if(inputFromUser.equalsIgnoreCase("ok"))
-				{
-					startDeployProcess();
-					break;
-				}
-				else if(inputFromUser.equalsIgnoreCase(""))
-					System.out.println("Please enter your input");
-				else if(inputFromUser.isEmpty())
-					System.out.println("Please enter your input");
-				else
-					System.out.println("Please enter valid input");
-			}*/
-		}
-		else
-			System.out.println("Defined process '" + restartProcess+ "' is not correct");
-	}
-	
+
 	private void startDeployProcess() 
 	{
-		System.out.println("Starting deploy process");
-		navigateToDeployments();
-		selectAndDeploy();
-		//activateChanges();
+		if(isAllInstancesAreShutdown())
+		{	
+			System.out.println("Starting deploy process");
+			navigateToDeployments();
+			selectAndDeploy();
+			//activateChanges();
+		}
+		else
+			System.out.println("All instances are not SHUTDOWN yet, Can NOT proceed with Deployment process");
 	}
 	
 	public void selectAndDeploy() 
@@ -791,6 +724,7 @@ public class WeblogicRestartController
 		else
 			System.out.println("Lock is already released, button is Disabled");
 	}
+	
 	public void updateDeployments()
 	{
 		WebElement btnFinish;
@@ -807,7 +741,7 @@ public class WeblogicRestartController
 		else
 			System.out.println("Update Button is not available");
 	}
-	int complatedDeployments =0;
+	
 	public int verifyDeploymentSuccessMsg()
 	{
 		
@@ -828,8 +762,6 @@ public class WeblogicRestartController
 		return complatedDeployments;
 	}
 	
-	
-
 	public void navigateToDeployments()
 	{
 		WebElement lnkDeployments =null;
@@ -843,11 +775,11 @@ public class WeblogicRestartController
 			lnkDeployments.click();
 		}
 	}
-	int selectCount =0;
+	
 	public void selectInstances(HashMap<String, Integer> instanceNameAndNumber2)
 	{
-		Set keySet = instanceNameAndNumber2.keySet();
-		Iterator itr = keySet.iterator();
+		Set<String> keySet = instanceNameAndNumber2.keySet();
+		Iterator<String> itr = keySet.iterator();
 		WebElement selectEle=null;
 		String instanceName = null;
 		
@@ -865,7 +797,6 @@ public class WeblogicRestartController
 				}
 				else
 				{
-					//System.out.println("is element selected? - "+selectEle.isSelected());
 					if(!selectEle.isSelected())
 						selectEle.click();
 				}
@@ -875,8 +806,19 @@ public class WeblogicRestartController
 				System.out.println("Caught Stale Element Exception... continuing with execution");
 				instanceName = itr.next().toString();
 				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-				selectEle.click();
+				selectCount++;
+				if(selectCount>=18)
+				{
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("window.scrollBy(0,250)", "");
+				}
+				else
+				{
+					if(!selectEle.isSelected())
+						selectEle.click();
+				}
 			}
+			waitForTwoSeconds();
 		}
 	}
 	public void waitForSec()
@@ -903,8 +845,8 @@ public class WeblogicRestartController
 			selectServerLifeCycleAssistant();
 		//startAutoRefresh();
 		try {
-			Set keySet = instanceNameAndNumber.keySet();
-			Iterator itr = keySet.iterator();
+			Set<String> keySet = instanceNameAndNumber.keySet();
+			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
 			String instanceState = null;
 			Integer instanceNumber = null;
@@ -923,6 +865,12 @@ public class WeblogicRestartController
 						System.out.println("'"+instanceName + "' is started and running now");
 						break;
 					}
+					else if(instanceState.equalsIgnoreCase("FAILED_NOT_RESTARTABLE"))
+					{
+						failedToStartInstancesCount++;
+						System.out.println("'"+instanceName + "' is not able to start, needs to check this manually");
+						break;
+					}
 				}
 			}
 			//stopAutoRefresh();
@@ -930,8 +878,8 @@ public class WeblogicRestartController
 		catch(StaleElementReferenceException e)
 		{
 			System.out.println("Caught Stale Element Exception... continuing with execution");
-			Set keySet = instanceNameAndNumber.keySet();
-			Iterator itr = keySet.iterator();
+			Set<String> keySet = instanceNameAndNumber.keySet();
+			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
 			String instanceState = null;
 			Integer instanceNumber = null;
@@ -1003,17 +951,19 @@ public class WeblogicRestartController
 			selectServerLifeCycleAssistant();
 		//startAutoRefresh();
 		try {
-			Set keySet = instanceNameAndNumber.keySet();
-			Iterator itr = keySet.iterator();
+			Set<String> keySet = instanceNameAndNumber.keySet();
+			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
 			String instanceState = null;
 			Integer instanceNumber = null;
+			int refreshCount=0;
 			while (itr.hasNext()) 
 			{
 				instanceName = (String) itr.next();
 				instanceNumber = instanceNameAndNumber.get(instanceName);
 				while(true)
 				{
+					//if(refreshCount)
 					refreshPage();
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
 					//System.out.println("Instance is '"+instanceName+"' and its state is '"+instanceState+"'");
@@ -1023,19 +973,19 @@ public class WeblogicRestartController
 						suspendedInstances++;
 						break;
 					}
+					//refreshCount++;
 				}
-				if(suspendedInstances==instanceNameAndNumber.size())
-					System.out.println("Total '"+suspendedInstances+"' got suspended");
-				else
-					System.out.println("something is wrong and some instances are not yet suspended");
 			}
-			
+			if(suspendedInstances==instanceNameAndNumber.size())
+				System.out.println("Total '"+suspendedInstances+"' got suspended");
+			else
+				System.out.println("something is wrong and some instances are not yet suspended");
 			//stopAutoRefresh();
 		}
 		catch(StaleElementReferenceException e)
 		{
-			Set keySet = instanceNameAndNumber.keySet();
-			Iterator itr = keySet.iterator();
+			Set<String> keySet = instanceNameAndNumber.keySet();
+			Iterator<String> itr = keySet.iterator();
 			while (itr.hasNext())
 			{
 				while(true)
@@ -1050,18 +1000,23 @@ public class WeblogicRestartController
 					if (instanceState.equals("ADMIN"))
 					{
 						System.out.println("'"+instanceName + "' got suspended");
+						suspendedInstances++;
 						break;
 					}
 				}
 			}
+			if(suspendedInstances==instanceNameAndNumber.size())
+				System.out.println("Total '"+suspendedInstances+"' got suspended");
+			else
+				System.out.println("something is wrong and some instances are not yet suspended");
 			//stopAutoRefresh();
 		}
 	}
-
+	
 	public boolean isSelectedInstancesAreRunning(HashMap<String,Integer> instanceNameAndNumber)
 	{
-		Set keySet = instanceNameAndNumber.keySet();
-		Iterator itr = keySet.iterator();
+		Set<String> keySet = instanceNameAndNumber.keySet();
+		Iterator<String> itr = keySet.iterator();
 		int running=0,mapSize=0;
 		
 		mapSize = instanceNameAndNumber.size();
@@ -1101,8 +1056,8 @@ public class WeblogicRestartController
 	
 	public boolean isSelectedInstancesAreSuspended(HashMap<String,Integer> instanceNameAndNumber)
 	{
-		Set keySet = instanceNameAndNumber.keySet();
-		Iterator itr = keySet.iterator();
+		Set<String> keySet = instanceNameAndNumber.keySet();
+		Iterator<String> itr = keySet.iterator();
 		int suspended=0,mapSize=0;
 		
 		mapSize = instanceNameAndNumber.size();
@@ -1133,10 +1088,41 @@ public class WeblogicRestartController
 		}
 	}
 	
+	public boolean isAllInstancesAreShutdown()
+	{
+		String instanceName= null;
+		HashMap<String,Integer> instanceNameAndNumber = null;
+		instanceNameAndNumber = new HashMap<String, Integer>();
+		boolean isInstancePresent= false;
+
+		for (int i = 0; elementId <= totalInstances; i++) 
+		{
+			isInstancePresent = driver.findElements(By.id("name" + elementId)).size() >= 1;
+			if (isInstancePresent) 
+			{
+				instanceName = driver.findElement(By.id("name" + elementId)).getText();
+				if (instanceName.contains("admin")) 
+				{
+					elementId++;
+					i--;
+					continue;
+				}
+				instanceNameAndNumber.put(instanceName, elementId);
+				elementId++;
+			}
+			if (elementId > totalInstances)
+			{
+				elementId=1;
+				System.out.println("Shutdown Process for RELEASE is completed...");
+			}
+		}
+		return isSelectedInstancesAreShutdown(instanceNameAndNumber);
+	}
+	
 	public boolean isSelectedInstancesAreShutdown(HashMap<String,Integer> instanceNameAndNumber)
 	{
-		Set keySet = instanceNameAndNumber.keySet();
-		Iterator itr = keySet.iterator();
+		Set<String> keySet = instanceNameAndNumber.keySet();
+		Iterator<String> itr = keySet.iterator();
 		int shutdown=0,mapSize=0;
 		
 		mapSize = instanceNameAndNumber.size();
@@ -1219,8 +1205,8 @@ public class WeblogicRestartController
 			selectServerLifeCycleAssistant();
 		//startAutoRefresh();
 		try {
-			Set keySet = instanceNameAndNumber.keySet();
-			Iterator itr = keySet.iterator();
+			Set<String> keySet = instanceNameAndNumber.keySet();
+			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
 			String instanceState = null;
 			Integer instanceNumber = null;
@@ -1247,8 +1233,8 @@ public class WeblogicRestartController
 		catch(StaleElementReferenceException e)
 		{
 			System.out.println("Caught Stale Element Exception... continuing with execution");
-			Set keySet = instanceNameAndNumber.keySet();
-			Iterator itr = keySet.iterator();
+			Set<String> keySet = instanceNameAndNumber.keySet();
+			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
 			String instanceState = null;
 			Integer instanceNumber = null;
@@ -1354,11 +1340,23 @@ public class WeblogicRestartController
 	
 	public void selectProcess()
 	{
-		
+		process = prop.getProperty("process");
+		if(process.equalsIgnoreCase("suspend"))
+		{
+			suspendProcess();
+		}
+		else if(process.equalsIgnoreCase("shutdown"))
+		{
+			shutDownProcess();
+		}
+		else if(process.equalsIgnoreCase("deployment"))
+		{
+			startDeployProcess();
+		}
 	}
 	public static void main(String[] args) throws FileNotFoundException
 	{
-		WeblogicRestartController wl = new WeblogicRestartController();
+		WeblogicController wl = new WeblogicController();
 		wl.setProperties();
 		wl.setWebdriver();
 		wl.loginToWebLogic();

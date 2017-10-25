@@ -38,7 +38,6 @@ public class WeblogicController
 	private int elementId = 1;
 	private int failedToStartInstancesCount=0;
 	Deployment deploy = null;
-	private int runningInstances =0;
 	public void setProperties() throws FileNotFoundException 
 	{
 		InputStream inputPropFile = new FileInputStream("./resources/properties/weblogicConfigs.properties");
@@ -216,9 +215,9 @@ public class WeblogicController
 			{
 				System.out.println("Caught 'Element is not clickable at point' exception");
 				if(e.getMessage().contains("Element is not clickable at point")||e.getMessage().contains("stale element reference"))
-				{	JavascriptExecutor jse = (JavascriptExecutor)driver;
-					jse.executeScript("window.scrollBy(0,-450)", "");
-					tabControl = driver.findElement(By.cssSelector("a[title*='Control- Tab']"));
+				{	
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", tabControl); 
 					highLightElement(driver,tabControl);
 					tabControl.click();
 					askUserForNumberOfInstancesToProcess();
@@ -256,7 +255,6 @@ public class WeblogicController
 		Image image = new ImageIcon(prop.getProperty("iconImage")).getImage();
 		JOptionPane pane = new JOptionPane("");
 		JPanel innerPanel = new JPanel();
-		//JDialog dialog = pane.createDialog("Are we ready to start deploy process?");
 		JDialog dialog = pane.createDialog(questionForUser);
 		JTextField text = new JTextField(10);
 		innerPanel.add(text);
@@ -374,7 +372,6 @@ public class WeblogicController
 			if(isSelectedInstancesAreRunning(instanceNameAndNumber))
 				startSuspendProcess(instanceNameAndNumber);
 			waitForFiveSeconds();
-			if(isSelectedInstancesAreSuspended(instanceNameAndNumber))
 				startShutdownProcess(instanceNameAndNumber);
 			elementId++;
 			instanceNameAndNumber.clear();
@@ -451,58 +448,6 @@ public class WeblogicController
 		}
 	}
 		
-/*	public void startInstancesProcess(HashMap<String, Integer> instanceNameAndNumber2)
-	{
-		String instanceName= null;
-		HashMap<String,Integer> instanceNameAndNumber = null;
-		instanceNameAndNumber = new HashMap<String, Integer>();
-		boolean isInstancePresent= false;
-		for(int i=0;elementId<=totalInstances;i++)
-		{
-			for (int j = 1; j <= numOfInstancesToProcess; j++) 
-			{
-				isInstancePresent = driver.findElements(By.id("name" + elementId)).size() >= 1;
-				if(isInstancePresent)
-				{
-					instanceName = driver.findElement(By.id("name" + elementId)).getText();
-					if(instanceName.contains("admin"))
-					{
-						elementId++;
-						j--;
-						continue;
-					}
-					instanceNameAndNumber.put(instanceName, elementId);
-					if(numOfInstancesToProcess != instanceNameAndNumber.size())
-						elementId++;
-				}
-			}
-			selectInstances(instanceNameAndNumber);
-			startInstances(instanceNameAndNumber);
-			System.out.println("Waiting to normalize the instances");
-			waitForFiveSeconds();
-			elementId++;
-			instanceNameAndNumber.clear();
-			if(environment.equals("Services"))
-			{
-				if(elementId>=totalInstances)
-				{
-					if(isAllInstancesAreRunning())
-						System.out.println("All Instances are running now");
-					if(failedToStartInstancesCount>=1)
-						System.out.println("Number of Failed instances to Start - "+failedToStartInstancesCount);
-				}
-			}
-			if(elementId>totalInstances)
-			{
-				if(isAllInstancesAreRunning())
-					System.out.println("All Instances are running now");
-				if(failedToStartInstancesCount>=1)
-					System.out.println("Number of Failed instances to Start - "+failedToStartInstancesCount);
-			}
-			
-		}
-	}*/
-	
 	public boolean isAllInstancesAreRunning() 
 	{
 		String instanceName= null;
@@ -529,7 +474,6 @@ public class WeblogicController
 		return isSelectedInstancesAreRunning(instanceNameAndNumber);
 	}
 
-	
 	public void navigateToDeployments()
 	{
 		WebElement lnkDeployments =null;
@@ -562,7 +506,8 @@ public class WeblogicController
 				if(instanceNumber>=15)
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
-					jse.executeScript("window.scrollBy(0,450)", "");
+					//jse.executeScript("window.scrollBy(0,500)", "");
+					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
 					if(!selectEle.isSelected())
 					{	
 						selectEle.click();
@@ -588,7 +533,7 @@ public class WeblogicController
 				if(instanceNumber>=15)
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
-					jse.executeScript("window.scrollBy(0,450)", "");
+					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
 					if(!selectEle.isSelected())
 					{	
 						selectEle.click();
@@ -625,7 +570,7 @@ public class WeblogicController
 				if(instanceNumber>=15)
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
-					jse.executeScript("window.scrollBy(0,450)", "");
+					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
 					if(selectEle.isSelected())
 					{	
 						selectEle.click();
@@ -650,7 +595,7 @@ public class WeblogicController
 				if(instanceNumber>=15)
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
-					jse.executeScript("window.scrollBy(0,450)", "");
+					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
 					if(selectEle.isSelected())
 					{	
 						selectEle.click();
@@ -682,7 +627,50 @@ public class WeblogicController
 		waitForFiveSeconds();
 		driver.navigate().refresh();
 	}
-	
+	public void rollingRestartProcess()
+	{
+		String instanceName= null;
+		HashMap<String,Integer> instanceNameAndNumber = null;
+		instanceNameAndNumber = new HashMap<String, Integer>();
+		boolean isInstancePresent= false;
+		for(int i=0;elementId<=totalInstances;i++)
+		{
+			for (int j = 1; j <= numOfInstancesToProcess; j++) 
+			{
+				isInstancePresent = driver.findElements(By.id("name" + elementId)).size() >= 1;
+				if(isInstancePresent)
+				{
+					instanceName = driver.findElement(By.id("name" + elementId)).getText();
+					if(instanceName.contains("admin"))
+					{
+						elementId++;
+						j--;
+						continue;
+					}
+					instanceNameAndNumber.put(instanceName, elementId);
+					if(numOfInstancesToProcess != instanceNameAndNumber.size())
+						elementId++;
+				}
+			}
+			
+			if(isSelectedInstancesAreRunning(instanceNameAndNumber))
+				startSuspendProcess(instanceNameAndNumber);
+			waitForFiveSeconds();
+				startShutdownProcess(instanceNameAndNumber);
+			if(isSelectedInstancesAreShutdown(instanceNameAndNumber))
+			{
+				selectInstances(instanceNameAndNumber);
+				startInstances(instanceNameAndNumber);
+			}
+			elementId++;
+			instanceNameAndNumber.clear();
+			//System.out.println("Waiting to normalize instances");
+			//waitForTenSeconds();
+			waitForFiveMinutes();
+			if(elementId>totalInstances)
+				System.out.println("Shutdown Process for RELEASE is completed...");
+		}
+	}
 	public void startInstances(HashMap<String, Integer> instanceNameAndNumber) 
 	{
 		System.out.println("Starting Instances");
@@ -800,7 +788,12 @@ public class WeblogicController
 			catch(WebDriverException e)
 			{
 				if(e.getMessage().contains("Element is not clickable at point")||e.getMessage().contains("stale element reference"))
-					continue;
+				{
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", btn); 
+					btn.click();
+					break;
+				}
 			}
 		}
 		
@@ -819,7 +812,12 @@ public class WeblogicController
 			catch(WebDriverException e)
 			{
 				if(e.getMessage().contains("Element is not clickable at point"))
-					continue;
+				{
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", btn); 
+					btn.click();
+					break;
+				}
 			}
 		}
 		
@@ -1072,7 +1070,14 @@ public class WeblogicController
 			catch(WebDriverException e)
 			{
 				if(e.getMessage().contains("Element is not clickable at point"))
-					continue;
+				{
+					//JavascriptExecutor jse = (JavascriptExecutor)driver;
+			     	//jse.executeScript("window.scrollBy(0,500)", "");
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", btn); 
+					btn.click();
+					break;
+				}
 			}
 		}
 		
@@ -1091,7 +1096,14 @@ public class WeblogicController
 			catch(WebDriverException e)
 			{
 				if(e.getMessage().contains("Element is not clickable at point"))
-					continue;
+				{
+					//JavascriptExecutor jse = (JavascriptExecutor)driver;
+			     	//jse.executeScript("window.scrollBy(0,500)", "");
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", btn);
+					btn.click();
+					break;
+				}
 			}
 		}
 		
@@ -1136,13 +1148,14 @@ public class WeblogicController
 				
 				while (true) 
 				{
-					refreshPage();
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
 					if (instanceState.equals("SHUTDOWN")) 
 					{
 						System.out.println("'"+instanceName + "' got shutdown");
 						break;
 					}
+					else if(instanceState.equals("FORCE_SHUTTING_DOWN")||driver.getPageSource().contains("TASK IN PROGRESS"))
+						refreshPage();
 				}
 			}
 		}
@@ -1271,9 +1284,9 @@ public class WeblogicController
 			localMap = generateMap();
 			selectInstances(localMap);
 		}
-		else if(process.equalsIgnoreCase("select"))
+		else if(process.equalsIgnoreCase("rolling"))
 		{
-			
+			rollingRestartProcess();
 		}
 	}
 	public static void main(String[] args) throws FileNotFoundException

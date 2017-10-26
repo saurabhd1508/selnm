@@ -1,4 +1,4 @@
-package automate.weblogic.servers.restart;
+package automate.weblogic.servers;
 
 import java.util.Arrays;
 import java.util.Iterator;

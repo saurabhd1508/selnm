@@ -12,14 +12,12 @@ import org.openqa.selenium.WebElement;
 public class Deployment 
 {
 	WebDriver driver;
-	String environment = null;
 	WeblogicController wlController = new WeblogicController();
 	Properties prop = new Properties();
 	int complatedDeployments =0;
-	public Deployment(WebDriver driver2, String env, Properties prop2)
+	public Deployment(WebDriver driver2, Properties prop2)
 	{
 		this.driver = driver2;
-		this.environment =env;
 		this.prop=prop2;
 	}
 	
@@ -27,266 +25,40 @@ public class Deployment
 	{
 		System.out.println("In Select and Deploy");
 		int totalDeployments = 0; 
-			
-		if (environment.equals("HMG03"))
+		String deploymentsString = prop.getProperty("deployments");
+		List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
+		totalDeployments = deploymentsList.size();
+		Iterator<String> deployItr = deploymentsList.iterator();
+		
+		while(deployItr.hasNext())
 		{
-			String deploymentsString = prop.getProperty("HMG03Deployments");
-			List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
-			totalDeployments = deploymentsList.size();
-			Iterator<String> deployItr = deploymentsList.iterator();
-			
-			while(deployItr.hasNext())
+			String deployStr = deployItr.next().toString();
+			System.out.println("Current Deployment is '"+deployStr+"'");
+			boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector("input[title='Select "+ deployStr+"']")).size()>=1;
+			if(isSelectDeployAvailabel)
 			{
-				String deployStr = deployItr.next().toString();
-				System.out.println("Current Deployment is '"+deployStr+"'");
-				boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector(deployStr)).size()>=1;
-				if(isSelectDeployAvailabel)
-				{
-					System.out.println("Deployment '"+deployStr+"' is available");
-					takeLockAndEdit();
-					WebElement selectDeploy = driver.findElement(By.cssSelector(deployStr));
-					selectDeploy.click();
-					updateDeployments();
-					complatedDeployments = verifyDeploymentSuccessMsg();
-					activateChanges();
-					System.out.println("Completed deployments are - "+complatedDeployments);
-				}
-				else
-					System.out.println("Selected Deployment is not available");
+				System.out.println("Deployment '"+deployStr+"' is available");
+				takeLockAndEdit();
+				WebElement selectDeploy = driver.findElement(By.cssSelector("input[title='Select "+ deployStr+"']"));
+				selectDeploy.click();
+				wlController.waitForTwoSeconds();
+				updateDeployments();
+				complatedDeployments = verifyDeploymentSuccessMsg();
+				wlController.waitForSec();
+				activateChanges();
+				System.out.println("Completed deployments are - "+complatedDeployments);
 			}
-			
-			if(complatedDeployments==totalDeployments)
-			{
-				releaseLockConfiguration();
-				System.out.println("All '"+totalDeployments+"' deployments are completed.");
-			}
-			else if(complatedDeployments!=totalDeployments)
-				System.out.println("Deployments are going on");
 			else
-				System.out.println("Something is wrong with deploymens, please check manually");
+				System.out.println("Selected Deployment is not available");
 		}
-		else if (environment.equals("HMG05"))
+			
+		if(complatedDeployments==totalDeployments)
 		{
-			String deploymentsString = prop.getProperty("HMG05Deployments");
-			List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
-			totalDeployments = deploymentsList.size();
-			Iterator<String> deployItr = deploymentsList.iterator();
-			
-			while(deployItr.hasNext())
-			{
-				String deployStr = deployItr.next().toString();
-				System.out.println("Current Deployment is '"+deployStr+"'");
-				boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector(deployStr)).size()>=1;
-				if(isSelectDeployAvailabel)
-				{
-					System.out.println("Deployment '"+deployStr+"' is available");
-					takeLockAndEdit();
-					WebElement selectDeploy = driver.findElement(By.cssSelector(deployStr));
-					selectDeploy.click();
-					updateDeployments();
-					complatedDeployments = verifyDeploymentSuccessMsg();
-					activateChanges();
-					System.out.println("Completed deployments are - "+complatedDeployments);
-				}
-				else
-					System.out.println("Selected Deployment is not available");
-			}
-			
-			if(complatedDeployments==totalDeployments)
-			{
-				releaseLockConfiguration();
-				System.out.println("All '"+totalDeployments+"' deployments are completed.");
-			}
-			else if(complatedDeployments!=totalDeployments)
-				System.out.println("Deployments are going on");
-			else
-				System.out.println("Something is wrong with deploymens, please check manually");
+			releaseLockConfiguration();
+			System.out.println("All '"+totalDeployments+"' deployments are completed.");
 		}
-		else if (environment.equals("DOM01"))
-		{
-			String deploymentsString = prop.getProperty("DOM01Deployments");
-			List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
-			totalDeployments = deploymentsList.size();
-			Iterator<String> deployItr = deploymentsList.iterator();
-			
-			while(deployItr.hasNext())
-			{
-				String deployStr = deployItr.next().toString();
-				System.out.println("Current Deployment is '"+deployStr+"'");
-				boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector(deployStr)).size()>=1;
-				if(isSelectDeployAvailabel)
-				{
-					System.out.println("Deployment '"+deployStr+"' is available");
-					takeLockAndEdit();
-					WebElement selectDeploy = driver.findElement(By.cssSelector(deployStr));
-					selectDeploy.click();
-					updateDeployments();
-					complatedDeployments = verifyDeploymentSuccessMsg();
-					activateChanges();
-					System.out.println("Completed deployments are - "+complatedDeployments);
-				}
-				else
-					System.out.println("Selected Deployment is not available");
-			}
-			
-			if(complatedDeployments==totalDeployments)
-			{
-				releaseLockConfiguration();
-				System.out.println("All '"+totalDeployments+"' deployments are completed.");
-			}
-			else if(complatedDeployments!=totalDeployments)
-				System.out.println("Deployments are going on");
-			else
-				System.out.println("Something is wrong with deploymens, please check manually");
-		}
-		else if (environment.equals("DOM02"))
-		{
-			String deploymentsString = prop.getProperty("DOM02Deployments");
-			List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
-			totalDeployments = deploymentsList.size();
-			Iterator<String> deployItr = deploymentsList.iterator();
-			
-			while(deployItr.hasNext())
-			{
-				String deployStr = deployItr.next().toString();
-				System.out.println("Current Deployment is '"+deployStr+"'");
-				boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector(deployStr)).size()>=1;
-				if(isSelectDeployAvailabel)
-				{
-					System.out.println("Deployment '"+deployStr+"' is available");
-					takeLockAndEdit();
-					WebElement selectDeploy = driver.findElement(By.cssSelector(deployStr));
-					selectDeploy.click();
-					updateDeployments();
-					complatedDeployments = verifyDeploymentSuccessMsg();
-					activateChanges();
-					System.out.println("Completed deployments are - "+complatedDeployments);
-				}
-				else
-					System.out.println("Selected Deployment is not available");
-			}
-			
-			if(complatedDeployments==totalDeployments)
-			{
-				releaseLockConfiguration();
-				System.out.println("All '"+totalDeployments+"' deployments are completed.");
-			}
-			else if(complatedDeployments!=totalDeployments)
-				System.out.println("Deployments are going on");
-			else
-				System.out.println("Something is wrong with deploymens, please check manually");
-		}
-		else if (environment.equals("DOM03"))
-		{
-			String deploymentsString = prop.getProperty("DOM03Deployments");
-			List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
-			totalDeployments = deploymentsList.size();
-			Iterator<String> deployItr = deploymentsList.iterator();
-			
-			while(deployItr.hasNext())
-			{
-				String deployStr = deployItr.next().toString();
-				System.out.println("Current Deployment is '"+deployStr+"'");
-				boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector(deployStr)).size()>=1;
-				if(isSelectDeployAvailabel)
-				{
-					System.out.println("Deployment '"+deployStr+"' is available");
-					takeLockAndEdit();
-					WebElement selectDeploy = driver.findElement(By.cssSelector(deployStr));
-					selectDeploy.click();
-					updateDeployments();
-					complatedDeployments = verifyDeploymentSuccessMsg();
-					activateChanges();
-					System.out.println("Completed deployments are - "+complatedDeployments);
-				}
-				else
-					System.out.println("Selected Deployment is not available");
-			}
-			
-			if(complatedDeployments==totalDeployments)
-			{
-				releaseLockConfiguration();
-				System.out.println("All '"+totalDeployments+"' deployments are completed.");
-			}
-			else if(complatedDeployments!=totalDeployments)
-				System.out.println("Deployments are going on");
-			else
-				System.out.println("Something is wrong with deploymens, please check manually");
-		}
-		else if (environment.equals("DOM04"))
-		{
-			String deploymentsString = prop.getProperty("DOM04Deployments");
-			List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
-			totalDeployments = deploymentsList.size();
-			Iterator<String> deployItr = deploymentsList.iterator();
-			
-			while(deployItr.hasNext())
-			{
-				String deployStr = deployItr.next().toString();
-				System.out.println("Current Deployment is '"+deployStr+"'");
-				boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector(deployStr)).size()>=1;
-				if(isSelectDeployAvailabel)
-				{
-					System.out.println("Deployment '"+deployStr+"' is available");
-					takeLockAndEdit();
-					WebElement selectDeploy = driver.findElement(By.cssSelector(deployStr));
-					selectDeploy.click();
-					updateDeployments();
-					complatedDeployments = verifyDeploymentSuccessMsg();
-					activateChanges();
-					System.out.println("Completed deployments are - "+complatedDeployments);
-				}
-				else
-					System.out.println("Selected Deployment is not available");
-			}
-			
-			if(complatedDeployments==totalDeployments)
-			{
-				releaseLockConfiguration();
-				System.out.println("All '"+totalDeployments+"' deployments are completed.");
-			}
-			else if(complatedDeployments!=totalDeployments)
-				System.out.println("Deployments are going on");
-			else
-				System.out.println("Something is wrong with deploymens, please check manually");
-		}
-		else if (environment.equals("Services"))
-		{
-			String deploymentsString = prop.getProperty("ServiceDeployments");
-			List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
-			totalDeployments = deploymentsList.size();
-			Iterator<String> deployItr = deploymentsList.iterator();
-			
-			while(deployItr.hasNext())
-			{
-				String deployStr = deployItr.next().toString();
-				System.out.println("Current Deployment is '"+deployStr+"'");
-				boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector(deployStr)).size()>=1;
-				if(isSelectDeployAvailabel)
-				{
-					System.out.println("Deployment '"+deployStr+"' is available");
-					takeLockAndEdit();
-					WebElement selectDeploy = driver.findElement(By.cssSelector(deployStr));
-					selectDeploy.click();
-					updateDeployments();
-					complatedDeployments = verifyDeploymentSuccessMsg();
-					activateChanges();
-					System.out.println("Completed deployments are - "+complatedDeployments);
-				}
-				else
-					System.out.println("Selected Deployment is not available");
-			}
-			
-			if(complatedDeployments==totalDeployments)
-			{
-				releaseLockConfiguration();
-				System.out.println("All '"+totalDeployments+"' deployments are completed.");
-			}
-			else if(complatedDeployments!=totalDeployments)
-				System.out.println("Deployments are going on");
-			else
-				System.out.println("Something is wrong with deploymens, please check manually");
-		}
+		else
+			System.out.println("Something is wrong with deploymens, please check manually");
 	}
 	
 	private void takeLockAndEdit()
@@ -300,7 +72,9 @@ public class Deployment
 			btnLockAndEdit.click();
 		}
 		else
+		{
 			System.out.println("Lock & Edit button is Disabled");
+		}
 	}
 	
 	private void activateChanges()

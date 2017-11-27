@@ -31,7 +31,6 @@ public class WeblogicController
 {
 	private Properties prop = new Properties();
 	private WebDriver driver;
-	private String environment;
 	private String process = null;
 	private int numOfInstancesToProcess = 0;
 	private int totalInstances = 0;
@@ -43,6 +42,7 @@ public class WeblogicController
 		InputStream inputPropFile = new FileInputStream("./resources/properties/weblogicConfigs.properties");
 		try {
 			prop.load(inputPropFile);
+			totalInstances = Integer.parseInt(prop.getProperty("totalInstances"));
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -53,49 +53,51 @@ public class WeblogicController
 		System.setProperty("webdriver.chrome.driver",prop.getProperty("webDriverPath"));
 		driver = new ChromeDriver();
 	}
-	public String decryptPassword(String reversePassword)
-	{
-		String pass=null;
-		StringBuilder str = new StringBuilder();
-		str.append(reversePassword);
-		str = str.reverse();
-		pass = str.toString();
-		return pass;
-	}
 	public void loginToWebLogic()
 	{
 		WebElement txtUser= null, txtPass=null;
 		boolean isTxtUseravailable=false;
-		String passwordInput = null;
+		String uName=null;
 		String password = null;
-		String reversePass=null;
-		driver.get(prop.getProperty("WebLogicBaseUrl"));
-		setEnvironment();
+		String baseUrl = prop.getProperty("weblogicBaseUrl"); 
+		if(baseUrl.equals(null) || baseUrl.equals("") || baseUrl.equals(" "))
+		{
+			System.out.println("Please enter value for weblogic's base url in weblogicConfigs.properties file");
+			driver.close();
+			System.exit(0);
+			
+		}
+		else
+			driver.get(baseUrl);
+			
 		isTxtUseravailable = driver.findElements(By.id("j_username")).size()>=1;
 		if(isTxtUseravailable)
 		{
+			uName = prop.getProperty("userName");
+			password = prop.getProperty("password");
+			
+			if(uName.equals(null) || uName.equals("") || uName.equals(" "))
+			{
+				System.out.println("Please enter correct value for userName in weblogicConfigs.properties file");
+				driver.close();
+				System.exit(0);
+			}
+			if(password.equals(null) || password.equals("") || password.equals(" ") || password.equals("XXXXX"))
+			{
+				System.out.println("Please enter correct value for password in weblogicConfigs.properties file");
+				driver.close();
+				System.exit(0);
+			}
+			
 			txtUser = driver.findElement(By.id("j_username"));
 			txtPass = driver.findElement(By.id("j_password"));
-			if(environment.equals("HMG03")||environment.equals("HMG05"))
-			{
-				highLightElement(driver,txtUser);
-				txtUser.sendKeys(prop.getProperty("HMGWLUserName"));
-				highLightElement(driver,txtPass);
-				reversePass = prop.getProperty("HMGWLPassowrd");
-				password = decryptPassword(reversePass);
-				System.out.println(password);
-				txtPass.sendKeys(password);
-			}
-			else if(environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04")||environment.equals("Services"))
-			{
-				highLightElement(driver,txtUser);
-				txtUser.sendKeys(prop.getProperty("ProductionWLUserName"));
-				highLightElement(driver,txtPass);
-				reversePass = prop.getProperty("ProductionWLPassword");
-				password = decryptPassword(reversePass);
-				System.out.println(password);
-				txtPass.sendKeys(password);
-			}
+			
+			highLightElement(driver,txtUser);
+			txtUser.sendKeys(uName);
+			
+			highLightElement(driver,txtPass);
+			txtPass.sendKeys(password);
+			
 			WebElement btnLogin = driver.findElement(By.className("formButton"));
 			highLightElement(driver,btnLogin);
 			btnLogin.click();
@@ -106,10 +108,11 @@ public class WeblogicController
 				System.out.println("Successfully logged in to Weblogic Admin Console");
 				navigateToServers();
 			}
-			else if(driver.getPageSource().contains("The username or password has been refused by WebLogic Server."))
+			else if(driver.getPageSource().contains("Authentication Denied"))
 			{
-				System.out.println("Please enter correct password");
-				
+				System.out.println("Please enter correct values for userName or password in weblogicConfigs.properties file");
+				driver.close();
+				System.exit(0);
 			}
 			else
 				System.out.println("Something is wrong with Weblogic Admin Console");
@@ -120,45 +123,6 @@ public class WeblogicController
 		}
 	}
 
-	public void setEnvironment()
-	{
-		if (driver.getCurrentUrl().contains("hmg03"))
-		{
-			environment = "HMG03";
-			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG03Instances"));
-		}
-		else if (driver.getCurrentUrl().contains("hmg05"))
-		{
-			environment = "HMG05";
-			totalInstances = Integer.parseInt(prop.getProperty("TotalHMG05Instances"));
-		}
-		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom01ConsoleBR")))
-		{
-			environment = "DOM01";
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom01Instances"));
-		}
-		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom02ConsoleBR")))
-		{
-			environment = "DOM02";
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom02Instances"));
-		}
-		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom03ConsoleBR")))
-		{
-			environment = "DOM03";
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom03Instances"));
-		}
-		else if (driver.getCurrentUrl().contains(prop.getProperty("Dom04ConsoleBR")))
-		{
-			environment = "DOM04";
-			totalInstances = Integer.parseInt(prop.getProperty("TotalDom04Instances"));
-		}
-		else if (driver.getCurrentUrl().contains(prop.getProperty("DomServicesBR")))
-		{
-			environment = "Services";
-			totalInstances = Integer.parseInt(prop.getProperty("TotalServiceDomInstances"));
-		}
-	}
-	
 	public void navigateToEnvironmentPage()
 	{
 		boolean isLnkEnvironmentAvailable = driver.findElements(By.id("linkEnvironmentsSummaryPage")).size()>=1;
@@ -168,6 +132,7 @@ public class WeblogicController
 			lnkEnvironmentAvailable.click();
 		}
 	}
+	
 	public void navigateToServers()
 	{
 		boolean isLnkServersAvailable = driver.findElements(By.linkText("Servers")).size()>=1;
@@ -213,7 +178,6 @@ public class WeblogicController
 			}
 			catch(WebDriverException e)
 			{
-				System.out.println("Caught 'Element is not clickable at point' exception");
 				if(e.getMessage().contains("Element is not clickable at point")||e.getMessage().contains("stale element reference"))
 				{	
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
@@ -247,6 +211,9 @@ public class WeblogicController
 		//Starting the actual Process...
 		
 		selectProcess();
+		System.out.println("Will close browser window after five minutes");
+		waitForFiveMinutes();
+		driver.close();
 	}
 
 	public String getUserInputFromPanel(String questionForUser)
@@ -299,7 +266,8 @@ public class WeblogicController
 	}
 	public void suspendProcess()
 	{
-		String instanceName= null;
+		String instanceName=null;
+		String instanceState=null;
 		HashMap<String,Integer> instanceNameAndNumber = null;
 		instanceNameAndNumber = new HashMap<String, Integer>();
 		boolean isInstancePresent= false;
@@ -317,7 +285,9 @@ public class WeblogicController
 						j--;
 						continue;
 					}
-					instanceNameAndNumber.put(instanceName, elementId);
+					instanceState = checkInstanceState(elementId);
+					if(!instanceState.equals("ADMIN")||!instanceState.equals("SHUTDOWN"))
+						instanceNameAndNumber.put(instanceName, elementId);
 					if(numOfInstancesToProcess != instanceNameAndNumber.size())
 						elementId++;
 				}
@@ -346,6 +316,7 @@ public class WeblogicController
 	public void shutDownProcess()
 	{
 		String instanceName= null;
+		String instanceState=null;
 		HashMap<String,Integer> instanceNameAndNumber = null;
 		instanceNameAndNumber = new HashMap<String, Integer>();
 		boolean isInstancePresent= false;
@@ -363,32 +334,46 @@ public class WeblogicController
 						j--;
 						continue;
 					}
-					instanceNameAndNumber.put(instanceName, elementId);
+					instanceState = checkInstanceState(elementId);
+					if(!instanceState.equals("SHUTDOWN"))
+						instanceNameAndNumber.put(instanceName, elementId);
 					if(numOfInstancesToProcess != instanceNameAndNumber.size())
 						elementId++;
 				}
 			}
 			
-			if(isSelectedInstancesAreRunning(instanceNameAndNumber))
+			if(isSelectedInstancesAreRunning(instanceNameAndNumber)&&!instanceNameAndNumber.isEmpty())
 				startSuspendProcess(instanceNameAndNumber);
 			waitForFiveSeconds();
 				startShutdownProcess(instanceNameAndNumber);
 			elementId++;
 			instanceNameAndNumber.clear();
 			//System.out.println("Waiting to normalize instances");
-			//waitForTenSeconds();
 			if(elementId>totalInstances)
 				System.out.println("Shutdown Process for RELEASE is completed...");
 		}
 	}
-	
+	public String checkInstanceState(int elementId2)
+	{
+		String instanceState = null;
+		instanceState = driver.findElement(By.id("state" + elementId2)).getText();
+		return instanceState;
+	}
 	public void startShutdownProcess(HashMap<String, Integer> instanceNameAndNumber)
 	{
 		selectInstances(instanceNameAndNumber);
-		if(isSelectedInstancesAreSuspended(instanceNameAndNumber))
+		if(isSelectedInstancesAreSuspended(instanceNameAndNumber)&&!instanceNameAndNumber.isEmpty())
 			shutDownInstances(instanceNameAndNumber);
+		else if(isSelectedInstancesAreShutdown(instanceNameAndNumber))
+		{
+			System.out.println("Selected Instances are already shutdown");
+			deSelectInstances(instanceNameAndNumber);
+		}
 		else
+		{
 			System.out.println("Selected Instances are not yet Suspened");
+			deSelectInstances(instanceNameAndNumber);
+		}
 	}
 
 	private void startDeployProcess() 
@@ -397,7 +382,7 @@ public class WeblogicController
 		{	
 			System.out.println("Starting deploy process");
 			navigateToDeployments();
-			deploy = new Deployment(driver, environment,prop);
+			deploy = new Deployment(driver, prop);
 			deploy.selectAndDeploy();
 		}
 		else
@@ -407,6 +392,7 @@ public class WeblogicController
 	public void startAllInstancesProcess()
 	{
 		String instanceName= null;
+		String instanceState=null;
 		HashMap<String,Integer> instanceNameAndNumber = null;
 		instanceNameAndNumber = new HashMap<String, Integer>();
 		boolean isInstancePresent= false;
@@ -424,7 +410,9 @@ public class WeblogicController
 						j--;
 						continue;
 					}
-					instanceNameAndNumber.put(instanceName, elementId);
+					instanceState = checkInstanceState(elementId);
+					if(!instanceState.equals("RUNNING"))
+						instanceNameAndNumber.put(instanceName, elementId);
 					if(numOfInstancesToProcess != instanceNameAndNumber.size())
 						elementId++;
 				}
@@ -436,44 +424,17 @@ public class WeblogicController
 			}
 			else
 			{
+				System.out.println("Selected instances are already running");
 				deSelectInstances(instanceNameAndNumber);
 			}
-			waitForFiveSeconds();
+			waitForTwoSeconds();
 			elementId++;
 			instanceNameAndNumber.clear();
-			//System.out.println("Waiting to normalize instances");
-			//waitForTenSeconds();
 			if(elementId>totalInstances)
 				System.out.println("Start Instances Process for RELEASE is completed...");
 		}
 	}
 		
-	public boolean isAllInstancesAreRunning() 
-	{
-		String instanceName= null;
-		HashMap<String,Integer> instanceNameAndNumber = null;
-		instanceNameAndNumber = new HashMap<String, Integer>();
-		boolean isInstancePresent= false;
-		int eleId=1;
-		for (int i = 0; eleId <= totalInstances; i++) 
-		{
-			isInstancePresent = driver.findElements(By.id("name" + eleId)).size() >= 1;
-			if (isInstancePresent) 
-			{
-				instanceName = driver.findElement(By.id("name" + eleId)).getText();
-				if (instanceName.contains("admin")) 
-				{
-					eleId++;
-					i--;
-					continue;
-				}
-				instanceNameAndNumber.put(instanceName, eleId);
-				eleId++;
-			}
-		}
-		return isSelectedInstancesAreRunning(instanceNameAndNumber);
-	}
-
 	public void navigateToDeployments()
 	{
 		WebElement lnkDeployments =null;
@@ -494,28 +455,24 @@ public class WeblogicController
 		Iterator<String> itr = keySet.iterator();
 		WebElement selectEle=null;
 		String instanceName = null;
-		String instanceNameForNum=null;
-		Integer instanceNumber =0;
 		while (itr.hasNext()) 
 		{
 			try
 			{
 				instanceName = itr.next().toString();
-				instanceNumber = instanceNameAndNumber.get(instanceName);
 				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-				if(instanceNumber>=15)
+				if(!selectEle.isSelected())
+				{	
+					selectEle.click();
+					waitForSec();
+				}
+			}
+			catch(StaleElementReferenceException e)
+			{
+				if(e.getMessage().contains("stale element reference"))
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
-					//jse.executeScript("window.scrollBy(0,500)", "");
 					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
-					if(!selectEle.isSelected())
-					{	
-						selectEle.click();
-						waitForSec();
-					}
-				}
-				else
-				{
 					if(!selectEle.isSelected())
 					{	
 						selectEle.click();
@@ -523,25 +480,12 @@ public class WeblogicController
 					}
 				}
 			}
-			catch(StaleElementReferenceException e)
+			catch(WebDriverException e)
 			{
-				System.out.println("Caught Stale Element Exception... continuing with execution");
-
-				instanceName = itr.next().toString();
-				instanceNumber = instanceNameAndNumber.get(instanceName);
-				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-				if(instanceNumber>=15)
+				if(e.getMessage().contains("Element is not clickable at point"))
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
 					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
-					if(!selectEle.isSelected())
-					{	
-						selectEle.click();
-						waitForSec();
-					}
-				}
-				else
-				{
 					if(!selectEle.isSelected())
 					{	
 						selectEle.click();
@@ -558,41 +502,21 @@ public class WeblogicController
 		Iterator<String> itr = keySet.iterator();
 		WebElement selectEle=null;
 		String instanceName = null;
-		String instanceNameForNum=null;
-		Integer instanceNumber =0;
 		while (itr.hasNext()) 
 		{
 			try
 			{
 				instanceName = itr.next().toString();
-				instanceNumber = instanceNameAndNumber.get(instanceName);
 				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-				if(instanceNumber>=15)
-				{
-					JavascriptExecutor jse = (JavascriptExecutor)driver;
-					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
-					if(selectEle.isSelected())
-					{	
-						selectEle.click();
-						waitForSec();
-					}
-				}
-				else
-				{
-					if(selectEle.isSelected())
-					{	
-						selectEle.click();
-						waitForSec();
-					}
+				if(selectEle.isSelected())
+				{	
+					selectEle.click();
+					waitForSec();
 				}
 			}
 			catch(StaleElementReferenceException e)
 			{
-				System.out.println("Caught Stale Element Exception... continuing with execution");
-				instanceName = itr.next().toString();
-				instanceNumber = instanceNameAndNumber.get(instanceName);
-				selectEle = driver.findElement(By.cssSelector("input[title='Select " + instanceName + "']"));
-				if(instanceNumber>=15)
+				if(e.getMessage().contains("stale element reference"))
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
 					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
@@ -602,8 +526,13 @@ public class WeblogicController
 						waitForSec();
 					}
 				}
-				else
+			}
+			catch(WebDriverException e)
+			{
+				if(e.getMessage().contains("Element is not clickable at point"))
 				{
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", selectEle); 
 					if(selectEle.isSelected())
 					{	
 						selectEle.click();
@@ -611,17 +540,9 @@ public class WeblogicController
 					}
 				}
 			}
-			waitForSec();
 		}
 	}
-	public void waitForSec()
-	{
-		try {
-			Thread.sleep(500);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-	}
+	
 	public void refreshPage()
 	{
 		waitForFiveSeconds();
@@ -693,8 +614,7 @@ public class WeblogicController
 			}
 		}
 		waitForTwoSeconds();
-		if(environment.equals("HMG03")||environment.equals("HMG05")||environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04") ||environment.equals("Services"))
-			selectServerLifeCycleAssistant();
+		selectServerLifeCycleAssistant();
 		try {
 			Set<String> keySet = instanceNameAndNumber.keySet();
 			Iterator<String> itr = keySet.iterator();
@@ -733,7 +653,6 @@ public class WeblogicController
 		}
 		catch(StaleElementReferenceException e)
 		{
-			System.out.println("Caught Stale Element Exception... continuing with execution");
 			Set<String> keySet = instanceNameAndNumber.keySet();
 			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
@@ -769,6 +688,10 @@ public class WeblogicController
 				}
 			}
 		}
+		if(failedToStartInstancesCount>=1)
+		{
+			System.out.println("Total '"+failedToStartInstancesCount + "' instances are failed to Start, they needs to check manually");
+		}
 	}
 	
 	public void suspendInstances(HashMap<String, Integer> instanceNameAndNumber) 
@@ -791,6 +714,7 @@ public class WeblogicController
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
 					jse.executeScript("arguments[0].scrollIntoView()", btn); 
+					highLightElement(driver, btn);
 					btn.click();
 					break;
 				}
@@ -815,14 +739,13 @@ public class WeblogicController
 				{
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
 					jse.executeScript("arguments[0].scrollIntoView()", btn); 
+					highLightElement(driver, btn);
 					btn.click();
 					break;
 				}
 			}
 		}
-		
-		if(environment.equals("HMG03")||environment.equals("HMG05")||environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04") ||environment.equals("Services"))
-			selectServerLifeCycleAssistant();
+		selectServerLifeCycleAssistant();
 		try {
 			Set<String> keySet = instanceNameAndNumber.keySet();
 			Iterator<String> itr = keySet.iterator();
@@ -848,13 +771,12 @@ public class WeblogicController
 				}
 			}
 			if(suspendedInstances==instanceNameAndNumber.size())
-				System.out.println("Total '"+suspendedInstances+"' got suspended");
+				System.out.println("Total '"+suspendedInstances+"' instances got suspended");
 			else
 				System.out.println("something is wrong and some instances are not yet suspended");
 		}
 		catch(StaleElementReferenceException e)
 		{
-			System.out.println("Caught Stale Element Exception... continuing with execution");
 			Set<String> keySet = instanceNameAndNumber.keySet();
 			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
@@ -879,7 +801,7 @@ public class WeblogicController
 				}
 			}
 			if(suspendedInstances==instanceNameAndNumber.size())
-				System.out.println("Total '"+suspendedInstances+"' got suspended");
+				System.out.println("Total '"+suspendedInstances+"' instances got suspended");
 			else
 				System.out.println("something is wrong and some instances are not yet suspended");
 		}
@@ -944,12 +866,11 @@ public class WeblogicController
 		}
 		if(suspended==mapSize)
 		{
-			System.out.println("All selected instances are suspended");
 			return true;
 		}
 		else
 		{
-			System.out.println("Selected instances are NOT suspended "+suspended+" "+mapSize);
+			System.out.println("Selected instances are NOT suspended");
 			return false;
 		}
 	}
@@ -986,7 +907,7 @@ public class WeblogicController
 		return false;
 	}
 	
-	public boolean isAllInstancesAreShutdown()
+	/*public boolean isAllInstancesAreShutdown()
 	{
 		String instanceName= null;
 		HashMap<String,Integer> instanceNameAndNumber = null;
@@ -1010,7 +931,7 @@ public class WeblogicController
 			}
 		}
 		return isSelectedInstancesAreShutdown(instanceNameAndNumber);
-	}
+	}*/
 	
 	public boolean isSelectedInstancesAreShutdown(HashMap<String,Integer> instanceNameAndNumber)
 	{
@@ -1036,12 +957,11 @@ public class WeblogicController
 		}
 		if(shutdown==mapSize)
 		{
-			System.out.println("All selected instances are shutdown "+shutdown+" "+mapSize);
 			return true;
 		}
 		else
 		{
-			System.out.println("Selected instances are NOT in SHUTDOWN state "+shutdown+" "+mapSize);
+			System.out.println("Selected instances are NOT in SHUTDOWN state");
 			return false;
 		}
 	}
@@ -1071,10 +991,9 @@ public class WeblogicController
 			{
 				if(e.getMessage().contains("Element is not clickable at point"))
 				{
-					//JavascriptExecutor jse = (JavascriptExecutor)driver;
-			     	//jse.executeScript("window.scrollBy(0,500)", "");
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
 					jse.executeScript("arguments[0].scrollIntoView()", btn); 
+					highLightElement(driver, btn);
 					btn.click();
 					break;
 				}
@@ -1097,18 +1016,16 @@ public class WeblogicController
 			{
 				if(e.getMessage().contains("Element is not clickable at point"))
 				{
-					//JavascriptExecutor jse = (JavascriptExecutor)driver;
-			     	//jse.executeScript("window.scrollBy(0,500)", "");
 					JavascriptExecutor jse = (JavascriptExecutor)driver;
 					jse.executeScript("arguments[0].scrollIntoView()", btn);
+					highLightElement(driver, btn);
 					btn.click();
 					break;
 				}
 			}
 		}
 		
-		if(environment.equals("HMG03")||environment.equals("HMG05")||environment.equals("DOM01")||environment.equals("DOM02")||environment.equals("DOM03")||environment.equals("DOM04") ||environment.equals("Services"))
-			selectServerLifeCycleAssistant();
+		selectServerLifeCycleAssistant();
 		try {
 			Set<String> keySet = instanceNameAndNumber.keySet();
 			Iterator<String> itr = keySet.iterator();
@@ -1135,7 +1052,6 @@ public class WeblogicController
 		}
 		catch(StaleElementReferenceException e)
 		{
-			System.out.println("Caught Stale Element Exception... continuing with execution");
 			Set<String> keySet = instanceNameAndNumber.keySet();
 			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
@@ -1158,6 +1074,15 @@ public class WeblogicController
 						refreshPage();
 				}
 			}
+		}
+	}
+	
+	public void waitForSec()
+	{
+		try {
+			Thread.sleep(500);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
 		}
 	}
 	
@@ -1266,23 +1191,6 @@ public class WeblogicController
 		else if(process.equalsIgnoreCase("start"))
 		{
 			startAllInstancesProcess();
-		}
-		else if(process.equalsIgnoreCase("map"))
-		{
-			int loop = 0;
-			loop = totalInstances / numOfInstancesToProcess;
-			HashMap<String,Integer> instanceNameAndNumber = null;
-			
-			System.out.println("Total loops to be processed are - "+loop);
-			for (int i = 0; i<loop; i++) 
-			{
-				instanceNameAndNumber = generateMap();
-				System.out.println("Map member is "+instanceNameAndNumber.keySet().iterator().next().toString());
-				selectInstances(instanceNameAndNumber);
-			}
-			HashMap<String, Integer> localMap=null;
-			localMap = generateMap();
-			selectInstances(localMap);
 		}
 		else if(process.equalsIgnoreCase("rolling"))
 		{

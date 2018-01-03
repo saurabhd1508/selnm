@@ -23,7 +23,6 @@ public class Deployment
 	
 	public void selectAndDeploy() 
 	{
-		System.out.println("In Select and Deploy");
 		int totalDeployments = 0; 
 		String deploymentsString = prop.getProperty("deployments");
 		List<String> deploymentsList = Arrays.asList(deploymentsString.split(",")); 
@@ -37,7 +36,6 @@ public class Deployment
 			boolean isSelectDeployAvailabel = driver.findElements(By.cssSelector("input[title='Select "+ deployStr+"']")).size()>=1;
 			if(isSelectDeployAvailabel)
 			{
-				System.out.println("Deployment '"+deployStr+"' is available");
 				takeLockAndEdit();
 				WebElement selectDeploy = driver.findElement(By.cssSelector("input[title='Select "+ deployStr+"']"));
 				selectDeploy.click();
@@ -46,7 +44,7 @@ public class Deployment
 				complatedDeployments = verifyDeploymentSuccessMsg();
 				wlController.waitForSec();
 				activateChanges();
-				System.out.println("Completed deployments are - "+complatedDeployments);
+				System.out.println("Completed deployments are :- "+complatedDeployments);
 			}
 			else
 				System.out.println("Selected Deployment is not available");
@@ -66,7 +64,7 @@ public class Deployment
 		boolean isBtnLockAndEditEnabled = driver.findElement(By.cssSelector("button[name='save']")).isEnabled();
 		if(isBtnLockAndEditEnabled)
 		{
-			System.out.println("Lock & Edit button is Enabled");
+			//System.out.println("Lock & Edit button is Enabled");
 			WebElement btnLockAndEdit = driver.findElement(By.cssSelector("button[name='save']"));
 			wlController.highLightElement(driver, btnLockAndEdit);
 			btnLockAndEdit.click();
@@ -83,18 +81,18 @@ public class Deployment
 		boolean isLblSuccessMsgAvaialbe=false;
 		if(isBtnActivateChangesEnabled)
 		{
-			System.out.println("Activate changes button is Enabled");
+			//System.out.println("Activate changes button is Enabled");
 			WebElement btnActivateChanges = driver.findElement(By.cssSelector("button[name='save']"));
 			wlController.highLightElement(driver, btnActivateChanges);
 			btnActivateChanges.click();
 			wlController.waitForTwoSeconds();
 			isLblSuccessMsgAvaialbe = driver.findElements(By.cssSelector("span[class='message_SUCCESS']")).size()>=1;
 			
-			System.out.println("Is success message availabel - "+isLblSuccessMsgAvaialbe);
+			//System.out.println("Is success message availabel - "+isLblSuccessMsgAvaialbe);
 			if(isLblSuccessMsgAvaialbe)
 			{
 				WebElement lblSuccessMsg = driver.findElement(By.cssSelector("span[class='message_SUCCESS']"));
-				System.out.println("'"+lblSuccessMsg.getText()+"'");
+				//System.out.println("'"+lblSuccessMsg.getText()+"'");
 				if(lblSuccessMsg.getText().contains("All changes have been activated"))
 				{
 					System.out.println("Changes have been activated.");
@@ -157,7 +155,7 @@ public class Deployment
 			if(lblSuccessMsg.getText().contains("Selected Deployments were updated."))
 			{
 				complatedDeployments++;
-				System.out.println("Selected Deployments were updated. Please Activate the changes");
+				System.out.println("Selected deployments are updated. Please Activate the changes");
 			}
 		}
 		else

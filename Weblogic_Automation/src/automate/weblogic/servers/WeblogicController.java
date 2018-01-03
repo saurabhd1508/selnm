@@ -26,6 +26,9 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeMethod;
+import org.testng.annotations.Test;
 
 public class WeblogicController 
 {
@@ -37,6 +40,7 @@ public class WeblogicController
 	private int elementId = 1;
 	private int failedToStartInstancesCount=0;
 	Deployment deploy = null;
+	@BeforeMethod
 	public void setProperties() throws FileNotFoundException 
 	{
 		InputStream inputPropFile = new FileInputStream("./resources/properties/weblogicConfigs.properties");
@@ -47,14 +51,16 @@ public class WeblogicController
 			e.printStackTrace();
 		}
 	}
-
+	
 	public void setWebdriver()
 	{
 		System.setProperty("webdriver.chrome.driver",prop.getProperty("webDriverPath"));
 		driver = new ChromeDriver();
 	}
+	@Test
 	public void loginToWebLogic()
 	{
+		setWebdriver();
 		WebElement txtUser= null, txtPass=null;
 		boolean isTxtUseravailable=false;
 		String uName=null;
@@ -1219,11 +1225,12 @@ public class WeblogicController
 			rollingRestartProcess();
 		}
 	}
-	public static void main(String[] args) throws FileNotFoundException
+	/*public void main() throws FileNotFoundException
 	{
+		System.out.println("in main");
 		WeblogicController wl = new WeblogicController();
 		wl.setProperties();
 		wl.setWebdriver();
 		wl.loginToWebLogic();
-	}
+	}*/
 }

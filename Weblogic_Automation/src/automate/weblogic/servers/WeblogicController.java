@@ -26,6 +26,7 @@ import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -216,12 +217,17 @@ public class WeblogicController
 		//Starting the actual Process...
 		
 		selectProcess();
+	}
+	
+	@AfterMethod
+	public void quitBrowserWindow()
+	{
 		System.out.println("Will close browser window after five minutes");
 		waitForFiveMinutes();
 		driver.close();
 		driver.quit();
 	}
-
+	
 	public String getUserInputFromPanel(String questionForUser)
 	{
 		String input = null;

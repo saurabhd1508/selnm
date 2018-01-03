@@ -64,8 +64,7 @@ public class WeblogicController
 		{
 			System.out.println("Please enter value for weblogic's base url in weblogicConfigs.properties file");
 			driver.close();
-			System.exit(0);
-			
+			driver.quit();
 		}
 		else
 			driver.get(baseUrl);
@@ -80,13 +79,13 @@ public class WeblogicController
 			{
 				System.out.println("Please enter correct value for userName in weblogicConfigs.properties file");
 				driver.close();
-				System.exit(0);
+				driver.quit();
 			}
 			if(password.equals(null) || password.equals("") || password.equals(" ") || password.equals("XXXXX"))
 			{
 				System.out.println("Please enter correct value for password in weblogicConfigs.properties file");
 				driver.close();
-				System.exit(0);
+				driver.quit();
 			}
 			
 			txtUser = driver.findElement(By.id("j_username"));
@@ -112,7 +111,7 @@ public class WeblogicController
 			{
 				System.out.println("Please enter correct values for userName or password in weblogicConfigs.properties file");
 				driver.close();
-				System.exit(0);
+				driver.quit();
 			}
 			else
 				System.out.println("Something is wrong with Weblogic Admin Console");
@@ -214,6 +213,7 @@ public class WeblogicController
 		System.out.println("Will close browser window after five minutes");
 		waitForFiveMinutes();
 		driver.close();
+		driver.quit();
 	}
 
 	public String getUserInputFromPanel(String questionForUser)
@@ -286,7 +286,7 @@ public class WeblogicController
 						continue;
 					}
 					instanceState = checkInstanceState(elementId);
-					if(!instanceState.equals("ADMIN")||!instanceState.equals("SHUTDOWN"))
+					if(instanceState.equals("RUNNING"))
 						instanceNameAndNumber.put(instanceName, elementId);
 					if(numOfInstancesToProcess != instanceNameAndNumber.size())
 						elementId++;
@@ -335,7 +335,8 @@ public class WeblogicController
 						continue;
 					}
 					instanceState = checkInstanceState(elementId);
-					if(!instanceState.equals("SHUTDOWN"))
+					//if(!instanceState.equals("SHUTDOWN"))
+					if(instanceState.equals("RUNNING"))
 						instanceNameAndNumber.put(instanceName, elementId);
 					if(numOfInstancesToProcess != instanceNameAndNumber.size())
 						elementId++;
@@ -413,7 +414,7 @@ public class WeblogicController
 					instanceState = checkInstanceState(elementId);
 					if(!instanceState.equals("RUNNING"))
 						instanceNameAndNumber.put(instanceName, elementId);
-					if(numOfInstancesToProcess != instanceNameAndNumber.size())
+					if(numOfInstancesToProcess != instanceNameAndNumber.size()&&j!=numOfInstancesToProcess)
 						elementId++;
 				}
 			}
@@ -443,7 +444,6 @@ public class WeblogicController
 		
 		if(isLnkDeploymentsAvailable)
 		{
-			System.out.println("Going to Deployments page");
 			lnkDeployments = driver.findElement(By.id("linkAppDeploymentsControlPage"));
 			lnkDeployments.click();
 		}
@@ -603,6 +603,8 @@ public class WeblogicController
 		{
 			WebElement btn = (WebElement) eleItr.next();
 			highLightElement(driver,btn);
+			JavascriptExecutor jse = (JavascriptExecutor)driver;
+			jse.executeScript("arguments[0].scrollIntoView()", btn); 
 			try{
 				btn.click();
 				break;
@@ -610,7 +612,10 @@ public class WeblogicController
 			catch(Exception e)
 			{
 				if(e.getMessage().contains("Element is not clickable at point")||e.getMessage().contains("stale element reference"))
+				{
+					System.out.println("Stale element exception... Element is not clickable at point");
 					continue;
+				}
 			}
 		}
 		waitForTwoSeconds();
@@ -621,13 +626,18 @@ public class WeblogicController
 			String instanceName = null;
 			String instanceState = null;
 			Integer instanceNumber = null;
+			WebElement eleInstanceState = null;
 			while (itr.hasNext()) 
 			{
 				instanceName = (String) itr.next();
 				instanceNumber = instanceNameAndNumber.get(instanceName);
 				while (true) 
 				{
-					instanceNumber = instanceNameAndNumber.get(instanceName);
+					eleInstanceState = driver.findElement(By.id("state" + instanceNumber));
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", eleInstanceState); 
+					highLightElement(driver, eleInstanceState);
+					//instanceNumber = instanceNameAndNumber.get(instanceName);
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
 					if (instanceState.equals("RUNNING")) 
 					{
@@ -653,6 +663,8 @@ public class WeblogicController
 		}
 		catch(StaleElementReferenceException e)
 		{
+			System.out.println("In Start Instances, Stale Element Exception caught.");
+
 			Set<String> keySet = instanceNameAndNumber.keySet();
 			Iterator<String> itr = keySet.iterator();
 			String instanceName = null;
@@ -753,12 +765,17 @@ public class WeblogicController
 			String instanceState = null;
 			Integer instanceNumber = null;
 			int refreshCount=0;
+			WebElement eleInstanceState = null;
 			while (itr.hasNext()) 
 			{
 				instanceName = (String) itr.next();
 				instanceNumber = instanceNameAndNumber.get(instanceName);
 				while(true)
 				{
+					eleInstanceState = driver.findElement(By.id("state" + instanceNumber));
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", eleInstanceState); 
+					highLightElement(driver, eleInstanceState);
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
 					if (instanceState.equals("ADMIN"))
 					{
@@ -1032,6 +1049,7 @@ public class WeblogicController
 			String instanceName = null;
 			String instanceState = null;
 			Integer instanceNumber = null;
+			WebElement eleInstanceState = null;
 			while (itr.hasNext()) 
 			{
 				instanceName = (String) itr.next();
@@ -1039,6 +1057,10 @@ public class WeblogicController
 				
 				while(true) 
 				{
+					eleInstanceState = driver.findElement(By.id("state" + instanceNumber));
+					JavascriptExecutor jse = (JavascriptExecutor)driver;
+					jse.executeScript("arguments[0].scrollIntoView()", eleInstanceState); 
+					highLightElement(driver, eleInstanceState);
 					instanceState = driver.findElement(By.id("state" + instanceNumber)).getText();
 					if (instanceState.equals("SHUTDOWN")) 
 					{

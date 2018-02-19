@@ -11,7 +11,7 @@ public class GoogleSearchTest
 		WebDriver driver = new ChromeDriver();
 		driver.navigate().to("https://www.google.co.in/");
 		GoogleHomePageObjects page =  new GoogleHomePageObjects(driver);
-		page.txtSearch.sendKeys("100rabh");
-		page.btnSearch.click();
+		page.searchGoogle("Selenium");
+		page.clickSelenium();
 	}
 }

@@ -16,4 +16,18 @@ public class GoogleHomePageObjects
 	
 	@FindBy (name="btnK")
 	public WebElement btnSearch;
+	
+	@FindBy(linkText="Selenium - Web Browser Automation")
+	public WebElement lnkSelenium;
+	
+	public void searchGoogle(String searchString)
+	{
+		txtSearch.sendKeys(searchString);
+		btnSearch.click();
+	}
+	
+	public void clickSelenium()
+	{
+		lnkSelenium.click();
+	}
 }

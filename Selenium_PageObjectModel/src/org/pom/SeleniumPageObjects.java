@@ -17,6 +17,4 @@ public class SeleniumPageObjects
 	
 	@FindBy(linkText="Browser Automation")
 	WebElement lnkHome;
-	
-	
 }

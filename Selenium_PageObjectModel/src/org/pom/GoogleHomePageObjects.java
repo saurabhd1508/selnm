@@ -7,6 +7,7 @@ import org.openqa.selenium.support.PageFactory;
 
 public class GoogleHomePageObjects 
 {
+	//Initialize my objects in the page 
 	public GoogleHomePageObjects(WebDriver driver)
 	{
 		PageFactory.initElements(driver,this);;
@@ -20,14 +21,16 @@ public class GoogleHomePageObjects
 	@FindBy(linkText="Selenium - Web Browser Automation")
 	public WebElement lnkSelenium;
 	
+	// Search for the text given
 	public void searchGoogle(String searchString)
 	{
 		txtSearch.sendKeys(searchString);
 		btnSearch.click();
 	}
 	
-	public void clickSelenium()
-	{
+	public SeleniumPageObjects clickSelenium()
+	{ 
 		lnkSelenium.click();
+		return new SeleniumPageObjects();
 	}
 }

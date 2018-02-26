@@ -12,9 +12,23 @@ public class SeleniumPageObjects
 		PageFactory.initElements(driver, this);
 	}
 	
+	public SeleniumPageObjects() 
+	{
+	}
+
 	@FindBy(linkText="Download")
 	WebElement lnkDownload; 
 	
 	@FindBy(linkText="Browser Automation")
 	WebElement lnkHome;
+	
+	public void clickDownload()
+	{
+		lnkDownload.click();
+	}
+	
+	public void navigateHome()
+	{
+		lnkHome.click();
+	}
 }

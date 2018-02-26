@@ -1,13 +1,8 @@
 package org.pom;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 
-import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 
 public class GoogleSearchTest 
@@ -18,8 +13,23 @@ public class GoogleSearchTest
 		WebDriver driver = new ChromeDriver();
 		
 		driver.navigate().to("https://www.google.co.in/");
+		//Object for the page
 		GoogleHomePageObjects page =  new GoogleHomePageObjects(driver);
+		
+		//search for the keyword 'Selenium'
 		page.searchGoogle("Selenium");
-		page.clickSelenium();
+		
+		//clicking the selenium website link, will return a selenium web site
+		SeleniumPageObjects seleniumPage =	page.clickSelenium();
+		//wait for page load
+		Thread.sleep(1000);
+		//click download tab
+		seleniumPage = new SeleniumPageObjects(driver);
+		Thread.sleep(1000);
+		seleniumPage.clickDownload();
+		Thread.sleep(1000);
+		
+		//navigate to selenium home page
+		seleniumPage.navigateHome();
 	}
 }

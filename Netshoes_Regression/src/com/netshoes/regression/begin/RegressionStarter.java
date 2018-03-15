@@ -31,6 +31,7 @@ public class RegressionStarter
 	}
 	  home.mouseOverOnEntrar();
   }
+  @Test
   public void navigateToLogin()
   {
 	  home.lnkLogin.click();

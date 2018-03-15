@@ -22,7 +22,8 @@ public class PDPoperation
 	public void start()throws InterruptedException
 	{
 		driver.get("https://www.netshoes.com.br/chuteira-futsal-nike-beco-2-futsal-masculina-azul+branco-004-5830-058");
-		List<WebElement> rdoSizes = new ArrayList<WebElement>();
+		
+		/*List<WebElement> rdoSizes = new ArrayList<WebElement>();
 		rdoSizes = driver.findElements(By.cssSelector("a[data-size='size-P']"));
 		Iterator<WebElement> itrSize = rdoSizes.iterator();
 		WebDriverWait wait = new WebDriverWait(driver,120);
@@ -39,7 +40,7 @@ public class PDPoperation
 			
 			wait.until(ExpectedConditions.stalenessOf(size));
 			//size = findElement(size.g);
-		}
+		}*/
 	}
 	public static void main(String[] args) throws InterruptedException
 	{

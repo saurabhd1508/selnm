@@ -10,7 +10,7 @@ public class GoogleHomePageObjects
 	//Initialize my objects in the page 
 	public GoogleHomePageObjects(WebDriver driver)
 	{
-		PageFactory.initElements(driver,this);;
+		PageFactory.initElements(driver,this);
 	}
 	@FindBy (name="q")
 	public WebElement txtSearch;

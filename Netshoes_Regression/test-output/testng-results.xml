@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results skipped="0" failed="0" ignored="0" total="1" passed="1">
+  <reporter-output>
+  </reporter-output>
+  <suite name="Default suite" duration-ms="24135" started-at="2018-03-15T11:04:59Z" finished-at="2018-03-15T11:05:23Z">
+    <groups>
+    </groups>
+    <test name="Default test" duration-ms="24135" started-at="2018-03-15T11:04:59Z" finished-at="2018-03-15T11:05:23Z">
+      <class name="com.netshoes.regression.begin.RegressionStarter">
+        <test-method status="PASS" signature="setWebdriver()[pri:0, instance:com.netshoes.regression.begin.RegressionStarter@4520ebad]" name="setWebdriver" is-config="true" duration-ms="2821" started-at="2018-03-15T16:34:59Z" finished-at="2018-03-15T16:35:02Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- setWebdriver -->
+        <test-method status="PASS" signature="naviagetToSite()[pri:0, instance:com.netshoes.regression.begin.RegressionStarter@4520ebad]" name="naviagetToSite" duration-ms="21302" started-at="2018-03-15T16:35:02Z" finished-at="2018-03-15T16:35:23Z">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- naviagetToSite -->
+      </class> <!-- com.netshoes.regression.begin.RegressionStarter -->
+    </test> <!-- Default test -->
+  </suite> <!-- Default suite -->
+</testng-results>

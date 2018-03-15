@@ -63,5 +63,6 @@
 	<classpathentry kind="lib" path="lib/xml-apis-1.4.01.jar"/>
 	<classpathentry kind="lib" path="lib/selenium-java-2.49.0-srcs.jar"/>
 	<classpathentry kind="lib" path="resources/browseDrivers/chromeDrivers/chromedriver_win32.zip"/>
+	<classpathentry kind="lib" path="lib/jxl.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

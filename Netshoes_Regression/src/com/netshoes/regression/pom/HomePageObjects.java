@@ -28,6 +28,4 @@ public class HomePageObjects
 	
 	@FindBy(linkText="Login")
 	public WebElement lnkLogin;
-	
-	
 }

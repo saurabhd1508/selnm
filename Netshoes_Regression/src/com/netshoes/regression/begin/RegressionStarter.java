@@ -8,17 +8,20 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
 import com.netshoes.regression.pom.HomePageObjects;
+import com.netshoes.regression.pom.LoginPageObjects;
 
 public class RegressionStarter 
 {
   WebDriver driver;
   HomePageObjects home;
+  LoginPageObjects log;
   @BeforeTest
   public void setWebdriver() 
   {
 	  System.setProperty("webdriver.chrome.driver", "./resources/browserDrivers/chromeDrivers/chromedriver.exe");
 	  driver = new ChromeDriver();
 	  home = new HomePageObjects(driver);
+	  log = new LoginPageObjects(driver);
   }
   @Test
   public void naviagetToSite()
@@ -36,7 +39,13 @@ public class RegressionStarter
   {
 	  home.lnkLogin.click();
   }
-  
+  @Test
+  public void enterCredentials()
+  {
+	  log.txtUserName.sendKeys("oesaurabh-55@yahoo.com");
+	  log.txtPassword.sendKeys("123456");
+	  log.btnLogin.click();
+  }
   /*@AfterSuite
   public void closeBrowser()
   {

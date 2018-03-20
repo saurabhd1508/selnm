@@ -18,6 +18,10 @@ public class LoginPageObjects
 	
 	//@FindBy(id="username")
 
+	public LoginPageObjects() 
+	{
+	}
+
 	@FindBy(how = How.XPATH, using = "//*[@id=\"username\"]")
 	//@FindBy(css="input[id='username']")
 	public WebElement txtUserName; 

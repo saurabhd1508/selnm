@@ -25,17 +25,29 @@ public class HomePageObjects
 	@FindBy(css="a[qa-automation='home-account-button']")
 	public WebElement mnuEntrar;
 	
+	@FindBy(linkText="Login")
+	public WebElement lnkLogin;
+	
+	@FindBy(css="span[id='username-logged']")
+	public List<WebElement> lblLoggedInUser;
+	
+	@FindBy(id="search-input")
+	public WebElement txtSearch; 
+	
+	@FindBy(css="button[qa-automation='home-search-button']")
+	public WebElement btnSearch;
+		
 	public void mouseOverOnEntrar()
 	{
 		CustomActions act =  new CustomActions(driver);
 		act.mouseHover(mnuEntrar);
 	}
 	
-	@FindBy(linkText="Login")
-	public WebElement lnkLogin;
-	
-	@FindBy(css="span[id='username-logged']")
-	public List<WebElement> lblLoggedInUser;
+	public LoginPageObjects goToLoginPage()
+	{
+		lnkLogin.click();
+		return new LoginPageObjects();
+	}
 	
 	public void validateUser()
 	{
@@ -43,5 +55,12 @@ public class HomePageObjects
 			System.out.println("Logged in user is - "+lblLoggedInUser.iterator().next().getText());
 		else
 			System.out.println("Something is wrong in login, please try again");
+	}
+	
+	public SearchPageObjects searchProducts(String searchString)
+	{
+		txtSearch.sendKeys(searchString);
+		btnSearch.click();
+		return new SearchPageObjects();
 	}
 }

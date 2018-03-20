@@ -9,19 +9,20 @@ import org.testng.annotations.Test;
 
 import com.netshoes.regression.pom.HomePageObjects;
 import com.netshoes.regression.pom.LoginPageObjects;
+import com.netshoes.regression.pom.SearchPageObjects;
 
 public class RegressionStarter 
 {
   WebDriver driver;
   HomePageObjects home;
   LoginPageObjects log;
-  
+  SearchPageObjects search;
   public RegressionStarter()
   {
 	  System.setProperty("webdriver.chrome.driver","./resources/browserDrivers/chromeDrivers/chromedriver.exe");
 	  driver = new ChromeDriver();
 	  home = new HomePageObjects(driver);
-	  log = new LoginPageObjects(driver);
+	  
   }
   public static void main(String arg[])
   {
@@ -56,15 +57,22 @@ public class RegressionStarter
   //@Test
   public void navigateToLogin()
   {
-	  home.lnkLogin.click();
+	  log = home.goToLoginPage();
+	  log = new LoginPageObjects(driver);
 	  log.enterCredentials();
 	  try {
-		Thread.sleep(1000);
+		Thread.sleep(50000);
 	} catch (InterruptedException e) {
 		e.printStackTrace();
 	}
 	  home.validateUser();
+	  search =  new SearchPageObjects(driver);
+	  search = home.searchProducts("camisa");
+	  String url = driver.getCurrentUrl();
+	  System.out.println(url);
   }
+  
+  
   //@Test
   /*public void enterCredentials()
   {

@@ -28,4 +28,11 @@ public class LoginPageObjects
 	
 	@FindBy(id="login-button")
 	public WebElement btnLogin;
+	
+	public void enterCredentials()
+	{
+		txtUserName.sendKeys("oesaurabh-55@yahoo.com");
+		txtPassword.sendKeys("123456");
+		btnLogin.click();
+	}
 }

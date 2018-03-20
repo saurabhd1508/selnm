@@ -15,16 +15,34 @@ public class RegressionStarter
   WebDriver driver;
   HomePageObjects home;
   LoginPageObjects log;
-  @BeforeTest
+  
+  public RegressionStarter()
+  {
+	  System.setProperty("webdriver.chrome.driver","./resources/browserDrivers/chromeDrivers/chromedriver.exe");
+	  driver = new ChromeDriver();
+	  home = new HomePageObjects(driver);
+	  log = new LoginPageObjects(driver);
+  }
+  public static void main(String arg[])
+  {
+	  RegressionStarter start =  new RegressionStarter();
+	  start.startExecution();
+  }
+  
+  public void startExecution()
+  {
+	  navigateToSite(); 
+  }
+  /*@BeforeTest
   public void setWebdriver() 
   {
 	  System.setProperty("webdriver.chrome.driver", "./resources/browserDrivers/chromeDrivers/chromedriver.exe");
 	  driver = new ChromeDriver();
 	  home = new HomePageObjects(driver);
 	  log = new LoginPageObjects(driver);
-  }
-  @Test
-  public void naviagetToSite()
+  }*/
+  //@Test
+  public void navigateToSite()
   {
 	  driver.get("http://www.netshoes.com.br");
 	  try {
@@ -33,19 +51,27 @@ public class RegressionStarter
 		e.printStackTrace();
 	}
 	  home.mouseOverOnEntrar();
+	  navigateToLogin();
   }
-  @Test
+  //@Test
   public void navigateToLogin()
   {
 	  home.lnkLogin.click();
+	  log.enterCredentials();
+	  try {
+		Thread.sleep(1000);
+	} catch (InterruptedException e) {
+		e.printStackTrace();
+	}
+	  home.validateUser();
   }
-  @Test
-  public void enterCredentials()
+  //@Test
+  /*public void enterCredentials()
   {
 	  log.txtUserName.sendKeys("oesaurabh-55@yahoo.com");
 	  log.txtPassword.sendKeys("123456");
 	  log.btnLogin.click();
-  }
+  }*/
   /*@AfterSuite
   public void closeBrowser()
   {

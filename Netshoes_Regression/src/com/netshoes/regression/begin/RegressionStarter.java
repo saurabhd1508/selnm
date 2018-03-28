@@ -1,6 +1,8 @@
 package com.netshoes.regression.begin;
 
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.testng.annotations.AfterSuite;
 import org.testng.annotations.AfterTest;
@@ -9,6 +11,7 @@ import org.testng.annotations.Test;
 
 import com.netshoes.regression.pom.HomePageObjects;
 import com.netshoes.regression.pom.LoginPageObjects;
+import com.netshoes.regression.pom.PDPObjects;
 import com.netshoes.regression.pom.SearchPageObjects;
 
 public class RegressionStarter 
@@ -17,6 +20,7 @@ public class RegressionStarter
   HomePageObjects home;
   LoginPageObjects log;
   SearchPageObjects search;
+  PDPObjects pdp;
   public RegressionStarter()
   {
 	  System.setProperty("webdriver.chrome.driver","./resources/browserDrivers/chromeDrivers/chromedriver.exe");
@@ -61,17 +65,40 @@ public class RegressionStarter
 	  log = new LoginPageObjects(driver);
 	  log.enterCredentials();
 	  try {
-		Thread.sleep(50000);
+		Thread.sleep(20000);
 	} catch (InterruptedException e) {
 		e.printStackTrace();
 	}
 	  home.validateUser();
-	  search =  new SearchPageObjects(driver);
-	  search = home.searchProducts("camisa");
+	  home.searchProducts("chuteira feminino");
+	  
+	  search = new SearchPageObjects(driver);
 	  String url = driver.getCurrentUrl();
 	  System.out.println(url);
+	  if(isThisSearchPage(url))
+	  {
+		  System.out.println("Yes we are on search page");
+		  search.selectProduct();
+		  pdp = new PDPObjects(driver);
+		  if(pdp.isColorsAvailable())
+		  {
+			  pdp.getInStockColor();
+		  }
+			  
+		  //WebElement product = driver.findElement(By.cssSelector("a[title^='Camisa ']"));
+		  //product.click();
+	  }
+	  else
+		  System.out.println("Something is worng... we are not on search page");
   }
   
+  public boolean isThisSearchPage(String url) 
+  {
+	  if(url.contains("www.netshoes.com.br/busca?"))
+		  return true;
+	  else
+		  return false;
+  }
   
   //@Test
   /*public void enterCredentials()
